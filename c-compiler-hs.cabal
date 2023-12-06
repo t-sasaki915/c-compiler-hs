@@ -1,0 +1,59 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           c-compiler-hs
+version:        1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/c-compiler-hs#readme>
+homepage:       https://github.com/t-sasaki915/c-compiler-hs#readme
+bug-reports:    https://github.com/t-sasaki915/c-compiler-hs/issues
+author:         T Sasaki
+maintainer:     netst915@gmail.com
+copyright:      2023 T Sasaki
+license:        MIT
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/t-sasaki915/c-compiler-hs
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_c_compiler_hs
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+  default-language: Haskell2010
+
+executable c-compiler-hs-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_c_compiler_hs
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , c-compiler-hs
+  default-language: Haskell2010
+
+test-suite c-compiler-hs-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_c_compiler_hs
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , c-compiler-hs
+  default-language: Haskell2010
