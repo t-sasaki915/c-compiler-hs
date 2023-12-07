@@ -3,6 +3,7 @@ module Main (main) where
 import           Control.Exception  (SomeException, try)
 import           Data.Maybe         (listToMaybe)
 import           System.Environment (getArgs, getProgName)
+import           System.Exit        (exitFailure)
 
 main :: IO ()
 main = do
@@ -15,8 +16,10 @@ main = do
         Right sourceCode ->
           putStrLn sourceCode
 
-        Left readErr ->
+        Left readErr -> do
           putStrLn $ show readErr
+          exitFailure
 
-    Nothing ->
+    Nothing -> do
       putStrLn $ "Usage: " ++ progName ++ " [Source File]"
+      exitFailure
