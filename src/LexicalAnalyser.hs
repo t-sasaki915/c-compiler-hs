@@ -1,5 +1,7 @@
 module LexicalAnalyser (TokenType (..), lexicalAnalyse) where
 
+import           Constant
+
 data TokenType = Keyword
                | Identifier
                | Number
@@ -16,4 +18,20 @@ instance Show TokenType where
   show Comment    = "COMMENT"
 
 lexicalAnalyse :: String -> [(TokenType, String)]
-lexicalAnalyse sourceCode = []
+lexicalAnalyse sourceCode = analyse [] 0
+  where
+  analyse :: [(TokenType, String)] -> Int -> [(TokenType, String)]
+  analyse previous index
+    | reachedToBottom    = exitLoop
+    | elem c whitespaces = addTokenAndNext (Whitespace, c')
+    | elem c symbols     = addTokenAndNext (Symbol, c')
+    | otherwise          = doNothingAndNext
+    where
+    reachedToBottom = index >= (length sourceCode)
+    c = sourceCode !! index
+    c' = [c] :: String
+
+    exitLoop = previous
+    doNothingAndNext = analyse previous (index + 1)
+    addTokenAndNext token = analyse (previous ++ [token]) (index + 1)
+
