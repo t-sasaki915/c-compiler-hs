@@ -27,39 +27,29 @@ lexicalAnalyse sourceCode = analyse [] "" False 0
           -> [(TokenType, String)]
   analyse previous memory keywordAnalyse index
     | reachedToBottom =
-        if keywordAnalyse then
-          previous ++ [(Keyword, memory)]
-
-        else
-          previous
+        case () of
+          () | keywordAnalyse -> previous ++ [(Keyword, memory)]
+             | otherwise      -> previous
 
     | c `elem` whitespaces =
-        if keywordAnalyse then
-          analyse (previous ++ [(Keyword, memory), (Whitespace, c')]) "" False (index + 1)
-
-        else
-          analyse (previous ++ [(Whitespace, c')]) memory keywordAnalyse (index + 1)
+        case () of
+          () | keywordAnalyse -> analyse (previous ++ [(Keyword, memory), (Whitespace, c')]) "" False (index + 1)
+             | otherwise      -> analyse (previous ++ [(Whitespace, c')]) memory keywordAnalyse (index + 1)
 
     | c `elem` symbols =
-        if keywordAnalyse then
-          analyse (previous ++ [(Keyword, memory), (Symbol, c')]) "" False (index + 1)
-
-        else
-          analyse (previous ++ [(Symbol, c')]) memory keywordAnalyse (index + 1)
+        case () of
+          () | keywordAnalyse -> analyse (previous ++ [(Keyword, memory), (Symbol, c')]) "" False (index + 1)
+             | otherwise      -> analyse (previous ++ [(Symbol, c')]) memory keywordAnalyse (index + 1)
 
     | c `elem` letters =
-        if keywordAnalyse then
-          analyse previous (memory ++ c') True (index + 1)
-
-        else
-          analyse previous (memory ++ c') True (index + 1)
+        case () of
+          () | keywordAnalyse -> analyse previous (memory ++ c') True (index + 1)
+             | otherwise      -> analyse previous (memory ++ c') True (index + 1)
 
     | c `elem` digits =
-        if keywordAnalyse then
-	  analyse previous (memory ++ c') True (index + 1)
-
-	else
-	  analyse (previous ++ [(Number, c')]) memory keywordAnalyse (index + 1)
+        case () of
+          () | keywordAnalyse -> analyse previous (memory ++ c') True (index + 1)
+             | otherwise      -> analyse (previous ++ [(Number, c')]) memory keywordAnalyse (index + 1)
 
     | otherwise = analyse previous memory keywordAnalyse (index + 1)
     where
