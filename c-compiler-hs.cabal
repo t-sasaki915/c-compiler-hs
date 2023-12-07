@@ -24,7 +24,8 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Constant
+      LexicalAnalyser
   other-modules:
       Paths_c_compiler_hs
   hs-source-dirs:

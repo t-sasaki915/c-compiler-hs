@@ -5,6 +5,8 @@ import           Data.Maybe         (listToMaybe)
 import           System.Environment (getArgs, getProgName)
 import           System.Exit        (exitFailure)
 
+import           LexicalAnalyser
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -13,11 +15,12 @@ main = do
     Just sourceFileName -> do
       sourceOrErr <- try (readFile sourceFileName) :: IO (Either SomeException String)
       case sourceOrErr of
-        Right sourceCode ->
-          putStrLn sourceCode
+        Right sourceCode -> do
+          let lexicalAnalysed = lexicalAnalyse sourceCode
+          print lexicalAnalysed
 
         Left readErr -> do
-          putStrLn $ show readErr
+          print readErr
           exitFailure
 
     Nothing -> do
