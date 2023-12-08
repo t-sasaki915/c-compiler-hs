@@ -104,7 +104,7 @@ lexicalAnalyse sourceCode = analyse [] "" False 0
 
     finaliseWordAnalyse :: Token
     finaliseWordAnalyse
-      | memory `elem` keywords             = Keyword memory
-      | all (`elem` digits) memory         = Number memory
-      | otherwise                          = Identifier memory
+      | memory `elem` keywords     = Keyword memory
+      | all (`elem` digits) memory = Number memory
+      | otherwise                  = Identifier memory
 
