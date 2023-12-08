@@ -31,49 +31,57 @@ instance Eq Token where
   (==) _ _                           = False
 
 lexicalAnalyse :: String -> [Token]
-lexicalAnalyse sourceCode = analyse [] "" False 0
+lexicalAnalyse sourceCode = analyse [] "" False False 0
   where
   analyse :: [Token]
           -> String
           -> Bool
+          -> Bool
           -> Int
           -> [Token]
-  analyse tokens memory wordAnalyse index
+  analyse tokens memory wordAnalyse commentAnalyse index
     | reachedToBottom =
         case () of
-          () | wordAnalyse -> tokens ++ [finaliseWordAnalyse]
-             | otherwise   -> tokens
+          () | commentAnalyse -> tokens ++ [Comment memory] -- TODO: ERROR
+             | wordAnalyse    -> tokens ++ [finaliseWordAnalyse]
+             | otherwise      -> tokens
     | c `elem` whitespaces =
         case () of
           () | wordAnalyse -> withNewTokens [finaliseWordAnalyse, Whitespace c] $
                                 withClearedMemory $
-                                withoutWordAnalysing
-                                withNextIndex
+                                withoutWordAnalysing $
+                                withoutCommentAnalysing
+                                continueAnalysing
              | otherwise   -> withNewToken (Whitespace c) $
                                 withoutNewMemoryChar $
-                                withoutWordAnalysing
-                                withNextIndex
+                                withoutWordAnalysing $
+                                withoutCommentAnalysing
+                                continueAnalysing
     | c `elem` symbols =
         case () of
           () | wordAnalyse -> withNewTokens [finaliseWordAnalyse, Symbol c] $
                                 withClearedMemory $
-                                withoutWordAnalysing
-                                withNextIndex
+                                withoutWordAnalysing $
+                                withoutCommentAnalysing
+                                continueAnalysing
              | otherwise   -> withNewToken (Symbol c) $
                                 withoutNewMemoryChar $
-                                withoutWordAnalysing
-                                withNextIndex
+                                withoutWordAnalysing $
+                                withoutCommentAnalysing
+                                continueAnalysing
     | c `elem` letters =
         withoutNewToken $
           withNewMemoryChar c $
-          withWordAnalysing
-          withNextIndex
+          withWordAnalysing $
+          withoutCommentAnalysing
+          continueAnalysing
     | c `elem` digits =
         withoutNewToken $
           withNewMemoryChar c $
-          withWordAnalysing
-          withNextIndex
-    | otherwise = withoutNewToken $ withoutNewMemoryChar $ withoutWordAnalysing withNextIndex
+          withWordAnalysing $
+          withoutCommentAnalysing
+          continueAnalysing
+    | otherwise = withoutNewToken $ withoutNewMemoryChar $ withoutWordAnalysing $ withoutCommentAnalysing continueAnalysing
     where
     reachedToBottom = index >= length sourceCode
     c = sourceCode !! index
@@ -108,8 +116,17 @@ lexicalAnalyse sourceCode = analyse [] "" False 0
                          -> [Token]
     withoutWordAnalysing f = let ?wordAnalyse = False in f
 
-    withNextIndex :: (?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool) => [Token]
-    withNextIndex = analyse ?token ?memory ?wordAnalyse (index + 1)
+    withCommentAnalysing :: (?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool)
+                         => ((?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool, ?commentAnalyse :: Bool) => [Token])
+                         -> [Token]
+    withCommentAnalysing f = let ?commentAnalyse = True in f
+    withoutCommentAnalysing :: (?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool)
+                            => ((?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool, ?commentAnalyse :: Bool) => [Token])
+                            -> [Token]
+    withoutCommentAnalysing f = let ?commentAnalyse = False in f
+
+    continueAnalysing :: (?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool, ?commentAnalyse :: Bool) => [Token]
+    continueAnalysing = analyse ?token ?memory ?wordAnalyse ?commentAnalyse (index + 1)
 
     finaliseWordAnalyse :: Token
     finaliseWordAnalyse
