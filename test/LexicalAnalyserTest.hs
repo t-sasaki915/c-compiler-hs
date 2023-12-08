@@ -22,8 +22,8 @@ lexicalAnalyseTest1 = TestCase (
   expected =
     [ Keyword "int", Whitespace ' ', Identifier "main", Whitespace ' '
     , Symbol '(', Keyword "void", Symbol ')', Whitespace ' ', Symbol '{'
-    , Whitespace ' ', Whitespace ' ', Keyword "return", Whitespace ' '
-    , Number "2", Symbol ';', Symbol '}'
+    , NewLine '\n', Whitespace ' ', Whitespace ' ', Keyword "return"
+    , Whitespace ' ', Number "2", Symbol ';', NewLine '\n', Symbol '}'
     ]
 
 lexicalAnalyseTest2 :: Test

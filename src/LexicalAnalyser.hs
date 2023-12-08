@@ -11,14 +11,16 @@ data Token = Keyword String
            | Number String
            | Symbol Char
            | Whitespace Char
+           | NewLine Char
            | Comment String
 
 instance Show Token where
   show (Keyword s)    = "KEYWORD '" ++ s ++ "'"
   show (Identifier s) = "ID '" ++ s ++ "'"
   show (Number s)     = "NUM '" ++ s ++ "'"
-  show (Symbol s)     = "SYMBOL '" ++ [s] ++ "'"
-  show (Whitespace s) = "WHITESPACE '" ++ [s] ++ "'"
+  show (Symbol c)     = "SYMBOL '" ++ [c] ++ "'"
+  show (Whitespace c) = "WHITESPACE '" ++ [c] ++ "'"
+  show (NewLine c)    = "NEWLINE '" ++ [c] ++ "'"
   show (Comment s)    = "COMMENT '" ++ s ++ "'"
 
 instance Eq Token where
@@ -27,6 +29,7 @@ instance Eq Token where
   (==) (Number x) (Number y)         = x == y
   (==) (Symbol x) (Symbol y)         = x == y
   (==) (Whitespace x) (Whitespace y) = x == y
+  (==) (NewLine x) (NewLine y)       = x == y
   (==) (Comment x) (Comment y)       = x == y
   (==) _ _                           = False
 
@@ -53,6 +56,18 @@ lexicalAnalyse sourceCode = analyse [] "" False False 0
                                 withoutCommentAnalysing
                                 continueAnalysing
              | otherwise   -> withNewToken (Whitespace c) $
+                                withoutNewMemoryChar $
+                                withoutWordAnalysing $
+                                withoutCommentAnalysing
+                                continueAnalysing
+    | c `elem` newLines =
+        case () of
+          () | wordAnalyse -> withNewTokens [finaliseWordAnalyse, NewLine c] $
+                                withClearedMemory $
+                                withoutWordAnalysing $
+                                withoutCommentAnalysing
+                                continueAnalysing
+             | otherwise   -> withNewToken (NewLine c) $
                                 withoutNewMemoryChar $
                                 withoutWordAnalysing $
                                 withoutCommentAnalysing
