@@ -16,8 +16,13 @@ main = do
       sourceOrErr <- try (readFile sourceFileName) :: IO (Either SomeException String)
       case sourceOrErr of
         Right sourceCode -> do
-          let lexicalAnalysed = lexicalAnalyse sourceCode
-          print lexicalAnalysed
+          case lexicalAnalyse sourceCode of
+            Right tokens ->
+              print tokens
+
+            Left lexicalAnalyseErr -> do
+              putStrLn "Lexical Analysation failed."
+              putStrLn $ "Because: " ++ show lexicalAnalyseErr
 
         Left readErr -> do
           print readErr

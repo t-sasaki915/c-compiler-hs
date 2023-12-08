@@ -20,7 +20,7 @@ lexicalAnalyseTest1 = TestCase (
     , "  return 2;\n"
     , "}"
     ]
-  expected =
+  expected = Right
     [ Keyword "int", Whitespace ' ', Identifier "main", Whitespace ' '
     , Symbol '(', Keyword "void", Symbol ')', Whitespace ' ', Symbol '{'
     , NewLine '\n', Whitespace ' ', Whitespace ' ', Keyword "return"
@@ -35,7 +35,7 @@ lexicalAnalyseTest2 = TestCase (
   )
   where
   sourceCode = "int main(void){return 2;}"
-  expected =
+  expected = Right
     [ Keyword "int", Whitespace ' ', Identifier "main", Symbol '('
     , Keyword "void", Symbol ')', Symbol '{', Keyword "return"
     , Whitespace ' ', Number "2", Symbol ';', Symbol '}'
