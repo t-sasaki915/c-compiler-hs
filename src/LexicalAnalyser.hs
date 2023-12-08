@@ -1,59 +1,110 @@
-module LexicalAnalyser (TokenType (..), lexicalAnalyse) where
+{-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE RankNTypes     #-}
+
+module LexicalAnalyser (Token (..), lexicalAnalyse) where
 
 import           Constant
 
-data TokenType = Keyword
-               | Identifier
-               | Number
-               | Symbol
-               | Whitespace
-               | Comment
 
-instance Show TokenType where
-  show Keyword    = "KEYWORD"
-  show Identifier = "ID"
-  show Number     = "NUM"
-  show Symbol     = "SYMBOL"
-  show Whitespace = "WHITESPACE"
-  show Comment    = "COMMENT"
+data Token = Keyword String
+           | Identifier String
+           | Number String
+           | Symbol Char
+           | Whitespace Char
+           | Comment String
 
-lexicalAnalyse :: String -> [(TokenType, String)]
+instance Show Token where
+  show (Keyword s)    = "KEYWORD '" ++ s ++ "'"
+  show (Identifier s) = "ID '" ++ s ++ "'"
+  show (Number s)     = "NUM '" ++ s ++ "'"
+  show (Symbol s)     = "SYMBOL '" ++ [s] ++ "'"
+  show (Whitespace s) = "WHITESPACE '" ++ [s] ++ "'"
+  show (Comment s)    = "COMMENT '" ++ s ++ "'"
+
+lexicalAnalyse :: String -> [Token]
 lexicalAnalyse sourceCode = analyse [] "" False 0
   where
-  analyse :: [(TokenType, String)]
+  analyse :: [Token]
           -> String
           -> Bool
           -> Int
-          -> [(TokenType, String)]
-  analyse previous memory keywordAnalyse index
+          -> [Token]
+  analyse tokens memory wordAnalyse index
     | reachedToBottom =
         case () of
-          () | keywordAnalyse -> previous ++ [(Keyword, memory)]
-             | otherwise      -> previous
-
+          () | wordAnalyse -> tokens ++ [finaliseWordAnalyse]
+             | otherwise   -> tokens
     | c `elem` whitespaces =
         case () of
-          () | keywordAnalyse -> analyse (previous ++ [(Keyword, memory), (Whitespace, c')]) "" False (index + 1)
-             | otherwise      -> analyse (previous ++ [(Whitespace, c')]) memory keywordAnalyse (index + 1)
-
+          () | wordAnalyse -> withNewTokens [finaliseWordAnalyse, Whitespace c] $
+                                withClearedMemory $
+                                withoutWordAnalysing
+                                withNextIndex
+             | otherwise   -> withNewToken (Whitespace c) $
+                                withoutNewMemoryChar $
+                                withoutWordAnalysing
+                                withNextIndex
     | c `elem` symbols =
         case () of
-          () | keywordAnalyse -> analyse (previous ++ [(Keyword, memory), (Symbol, c')]) "" False (index + 1)
-             | otherwise      -> analyse (previous ++ [(Symbol, c')]) memory keywordAnalyse (index + 1)
-
+          () | wordAnalyse -> withNewTokens [finaliseWordAnalyse, Symbol c] $
+                                withClearedMemory $
+                                withoutWordAnalysing
+                                withNextIndex
+             | otherwise   -> withNewToken (Symbol c) $
+                                withoutNewMemoryChar $
+                                withoutWordAnalysing
+                                withNextIndex
     | c `elem` letters =
-        case () of
-          () | keywordAnalyse -> analyse previous (memory ++ c') True (index + 1)
-             | otherwise      -> analyse previous (memory ++ c') True (index + 1)
-
+        withoutNewToken $
+          withNewMemoryChar c $
+          withWordAnalysing
+          withNextIndex
     | c `elem` digits =
-        case () of
-          () | keywordAnalyse -> analyse previous (memory ++ c') True (index + 1)
-             | otherwise      -> analyse (previous ++ [(Number, c')]) memory keywordAnalyse (index + 1)
-
-    | otherwise = analyse previous memory keywordAnalyse (index + 1)
+        withoutNewToken $
+          withNewMemoryChar c $
+          withWordAnalysing
+          withNextIndex
+    | otherwise = withoutNewToken $ withoutNewMemoryChar $ withoutWordAnalysing withNextIndex
     where
     reachedToBottom = index >= length sourceCode
     c = sourceCode !! index
-    c' = [c] :: String
+
+    withNewTokens :: [Token] -> ((?token :: [Token]) => [Token]) -> [Token]
+    withNewTokens newTokens f = let ?token = tokens ++ newTokens in f
+    withNewToken :: Token -> ((?token :: [Token]) => [Token]) -> [Token]
+    withNewToken newToken f = let ?token = tokens ++ [newToken] in f
+    withoutNewToken :: ((?token :: [Token]) => [Token]) -> [Token]
+    withoutNewToken f = let ?token = tokens in f
+
+    withNewMemoryChar :: (?token :: [Token])
+                      => Char
+                      -> ((?token :: [Token], ?memory :: String) => [Token])
+                      -> [Token]
+    withNewMemoryChar mc f = let ?memory = memory ++ [mc] in f
+    withoutNewMemoryChar :: (?token ::[Token])
+                         => ((?token :: [Token], ?memory :: String) => [Token])
+                         -> [Token]
+    withoutNewMemoryChar f = let ?memory = memory in f
+    withClearedMemory :: (?token :: [Token])
+                      => ((?token :: [Token], ?memory :: String) => [Token])
+                      -> [Token]
+    withClearedMemory f = let ?memory = "" in f
+
+    withWordAnalysing :: (?token :: [Token], ?memory :: String)
+                      => ((?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool) => [Token])
+                      -> [Token]
+    withWordAnalysing f = let ?wordAnalyse = True in f
+    withoutWordAnalysing :: (?token :: [Token], ?memory :: String)
+                         => ((?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool) => [Token])
+                         -> [Token]
+    withoutWordAnalysing f = let ?wordAnalyse = False in f
+
+    withNextIndex :: (?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool) => [Token]
+    withNextIndex = analyse ?token ?memory ?wordAnalyse (index + 1)
+
+    finaliseWordAnalyse :: Token
+    finaliseWordAnalyse
+      | memory `elem` keywords             = Keyword memory
+      | all (`elem` digits) memory = Number memory
+      | otherwise                          = Identifier memory
 
