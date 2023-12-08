@@ -21,6 +21,15 @@ instance Show Token where
   show (Whitespace s) = "WHITESPACE '" ++ [s] ++ "'"
   show (Comment s)    = "COMMENT '" ++ s ++ "'"
 
+instance Eq Token where
+  (==) (Keyword x) (Keyword y)       = x == y
+  (==) (Identifier x) (Identifier y) = x == y
+  (==) (Number x) (Number y)         = x == y
+  (==) (Symbol x) (Symbol y)         = x == y
+  (==) (Whitespace x) (Whitespace y) = x == y
+  (==) (Comment x) (Comment y)       = x == y
+  (==) _ _                           = False
+
 lexicalAnalyse :: String -> [Token]
 lexicalAnalyse sourceCode = analyse [] "" False 0
   where
