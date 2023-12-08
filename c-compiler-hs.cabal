@@ -26,6 +26,7 @@ library
   exposed-modules:
       Constant
       LexicalAnalyser
+      Token
   other-modules:
       Paths_c_compiler_hs
   hs-source-dirs:

@@ -4,6 +4,7 @@ module LexicalAnalyserTest
   ) where
 
 import           LexicalAnalyser
+import           Token
 
 import           Test.HUnit
 
