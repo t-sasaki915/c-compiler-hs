@@ -10,7 +10,7 @@ import           Test.HUnit
 
 lexicalAnalyseTest1 :: Test
 lexicalAnalyseTest1 = TestCase (
-    assertEqual "LexicalAnalyseTest 1"
+    assertEqual "lexicalAnalyseTest 1"
                 (lexicalAnalyse sourceCode)
                 expected
   )
@@ -29,7 +29,7 @@ lexicalAnalyseTest1 = TestCase (
 
 lexicalAnalyseTest2 :: Test
 lexicalAnalyseTest2 = TestCase (
-    assertEqual "LexicalAnalyseTest 2"
+    assertEqual "lexicalAnalyseTest 2"
                 (lexicalAnalyse sourceCode)
                 expected
   )

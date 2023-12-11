@@ -5,6 +5,13 @@
 
 packages:
 - completed:
+    hackage: extra-1.7.14@sha256:e3d3ce1dc7746b1132930e48c59fb5e8c51a09e92e0c031316be031067a273fb,2707
+    pantry-tree:
+      sha256: 22bd4bbf11717a50e009bbbcb685038d1a45799c71abaf993edd93edcd0b2bc2
+      size: 1960
+  original:
+    hackage: extra-1.7.14
+- completed:
     hackage: HUnit-1.6.2.0@sha256:1a79174e8af616117ad39464cac9de205ca923da6582825e97c10786fda933a4,1588
     pantry-tree:
       sha256: 4f20a5a33866171260d0ee1e256c27f53cc84d37a68d498c3e12347f4e3d05b4

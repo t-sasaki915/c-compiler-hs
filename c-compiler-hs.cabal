@@ -27,6 +27,7 @@ library
       Constant
       LexicalAnalyseException
       LexicalAnalyser
+      SourceCodeUtil
       Token
   other-modules:
       Paths_c_compiler_hs
@@ -35,6 +36,7 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , extra
   default-language: Haskell2010
 
 executable c-compiler-hs-exe
@@ -47,6 +49,7 @@ executable c-compiler-hs-exe
   build-depends:
       base >=4.7 && <5
     , c-compiler-hs
+    , extra
   default-language: Haskell2010
 
 test-suite c-compiler-hs-test
@@ -54,6 +57,7 @@ test-suite c-compiler-hs-test
   main-is: Spec.hs
   other-modules:
       LexicalAnalyserTest
+      SourceCodeUtilTest
       Paths_c_compiler_hs
   hs-source-dirs:
       test
@@ -62,4 +66,5 @@ test-suite c-compiler-hs-test
       HUnit
     , base >=4.7 && <5
     , c-compiler-hs
+    , extra
   default-language: Haskell2010
