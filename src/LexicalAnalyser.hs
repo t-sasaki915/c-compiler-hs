@@ -21,7 +21,7 @@ lexicalAnalyse sourceCode = analyse [] "" False False 0
   analyse tokens memory wordAnalyse commentAnalyse index
     | reachedToBottom =
         case () of
-          () | commentAnalyse -> Left UnclosingComment
+          () | commentAnalyse -> Left $ UnclosingComment index sourceCode
              | wordAnalyse    -> Right $ tokens ++ [finaliseWordAnalyse]
              | otherwise      -> Right tokens
     | c `elem` whitespaces =
@@ -72,7 +72,7 @@ lexicalAnalyse sourceCode = analyse [] "" False False 0
           withWordAnalysing $
           withoutCommentAnalysing
           continueAnalysing
-    | otherwise = Left $ UnexpectedCharacter c
+    | otherwise = Left $ UnexpectedCharacter index sourceCode c
     where
     reachedToBottom = index >= length sourceCode
     c = sourceCode !! index
