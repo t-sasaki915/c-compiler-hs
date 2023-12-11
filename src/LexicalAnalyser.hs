@@ -1,6 +1,3 @@
-{-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE RankNTypes     #-}
-
 module LexicalAnalyser (lexicalAnalyse) where
 
 import           Constant
@@ -9,119 +6,166 @@ import           Token
 
 type AnalyseResult = Either LexicalAnalyseException [Token]
 
+data State = State
+  { tokens               :: [Token]
+  , wordAnalyseMemory    :: String
+  , commentAnalyseMemory :: String
+  , analysingWord        :: Bool
+  , analysingComment     :: Bool
+  , index                :: Int
+  }
+
+withNewTokens :: [Token] -> (State -> [Token] -> State) -> State -> State
+withNewTokens ts f s = f s (tokens s ++ ts)
+withNewToken :: Token -> (State -> [Token] -> State) -> State -> State
+withNewToken t = withNewTokens [t]
+withPreviousTokens :: (State -> [Token] -> State) -> State -> State
+withPreviousTokens = withNewTokens []
+
+withMoreWordAnalyseMemory :: Char -> (State -> [Token] -> String -> State) -> State -> [Token] -> State
+withMoreWordAnalyseMemory c f s ts = f s ts (wordAnalyseMemory s ++ [c])
+withPreviousWordAnalyseMemory :: (State -> [Token] -> String -> State) -> State -> [Token] -> State
+withPreviousWordAnalyseMemory f s ts = f s ts (wordAnalyseMemory s)
+withClearedWordAnalyseMemory :: (State -> [Token] -> String -> State) -> State -> [Token] -> State
+withClearedWordAnalyseMemory f s ts = f s ts ""
+
+withMoreCommentAnalyseMemory :: Char -> (State -> [Token] -> String -> String -> State) -> State -> [Token] -> String -> State
+withMoreCommentAnalyseMemory c f s ts wm = f s ts wm (commentAnalyseMemory s ++ [c])
+withPreviousCommentAnalyseMemory :: (State -> [Token] -> String -> String -> State) -> State -> [Token] -> String -> State
+withPreviousCommentAnalyseMemory f s ts wm = f s ts wm (commentAnalyseMemory s)
+withClearedCommentAnalyseMemory :: (State -> [Token] -> String -> String -> State) -> State -> [Token] -> String -> State
+withClearedCommentAnalyseMemory f s ts wm = f s ts wm ""
+
+withWordAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> State) -> State -> [Token] -> String -> String -> State
+withWordAnalyseMode f s ts wm cm = f s ts wm cm True
+withoutWordAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> State) -> State -> [Token] -> String -> String -> State
+withoutWordAnalyseMode f s ts wm cm = f s ts wm cm False
+withPreviousWordAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> State) -> State -> [Token] -> String -> String -> State
+withPreviousWordAnalyseMode f s ts wm cm = f s ts wm cm (analysingWord s)
+
+withCommentAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> State
+withCommentAnalyseMode f s ts wm cm wa = f s ts wm cm wa True
+withoutCommentAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> State
+withoutCommentAnalyseMode f s ts wm cm wa = f s ts wm cm wa False
+withPreviousCommentAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> State
+withPreviousCommentAnalyseMode f s ts wm cm wa = f s ts wm cm wa (analysingComment s)
+
+withNewIndex :: Int -> State -> [Token] -> String -> String -> Bool -> Bool -> State
+withNewIndex i s ts wm cm wa ca = State ts wm cm wa ca (index s + i)
+withNextIndex :: State -> [Token] -> String -> String -> Bool -> Bool -> State
+withNextIndex = withNewIndex 1
+
 lexicalAnalyse :: String -> AnalyseResult
-lexicalAnalyse sourceCode = analyse [] "" False False 0
+lexicalAnalyse sourceCode = analyse $ State [] "" "" False False 0
   where
-  analyse :: [Token]
-          -> String
-          -> Bool
-          -> Bool
-          -> Int
-          -> AnalyseResult
-  analyse tokens memory wordAnalyse commentAnalyse index
+  analyse :: State -> AnalyseResult
+  analyse state
     | reachedToBottom =
         case () of
-          () | commentAnalyse -> Left $ UnclosingComment index sourceCode
-             | wordAnalyse    -> Right $ tokens ++ [finaliseWordAnalyse]
-             | otherwise      -> Right tokens
+          () | commentAnalyse ->
+                 case () of
+                   () | wordAnalyse -> Right $ tokens state ++ [finaliseWordAnalyse, Comment commentMemory]
+                      | otherwise   -> Right $ tokens state ++ [Comment commentMemory]
+             | wordAnalyse    -> Right $ tokens state ++ [finaliseWordAnalyse]
+             | otherwise      -> Right $ tokens state
     | c `elem` whitespaces =
         case () of
-          () | wordAnalyse -> withNewTokens [finaliseWordAnalyse, Whitespace c] $
-                                withClearedMemory $
-                                withoutWordAnalysing $
-                                withoutCommentAnalysing
-                                continueAnalysing
-             | otherwise   -> withNewToken (Whitespace c) $
-                                withoutNewMemoryChar $
-                                withoutWordAnalysing $
-                                withoutCommentAnalysing
-                                continueAnalysing
+          () | wordAnalyse ->
+                 continueAnalysing $
+                   withNewTokens [finaliseWordAnalyse, Whitespace c] $
+                   withClearedWordAnalyseMemory $
+                   withPreviousCommentAnalyseMemory $
+                   withoutWordAnalyseMode $
+                   withoutCommentAnalyseMode
+                   withNextIndex
+             | otherwise ->
+                 continueAnalysing $
+                   withNewToken (Whitespace c) $
+                   withPreviousWordAnalyseMemory $
+                   withPreviousCommentAnalyseMemory $
+                   withoutWordAnalyseMode $
+                   withoutCommentAnalyseMode
+                   withNextIndex
     | c `elem` newLines =
         case () of
-          () | wordAnalyse -> withNewTokens [finaliseWordAnalyse, NewLine c] $
-                                withClearedMemory $
-                                withoutWordAnalysing $
-                                withoutCommentAnalysing
-                                continueAnalysing
-             | otherwise   -> withNewToken (NewLine c) $
-                                withoutNewMemoryChar $
-                                withoutWordAnalysing $
-                                withoutCommentAnalysing
-                                continueAnalysing
+          () | wordAnalyse ->
+                 continueAnalysing $
+                   withNewTokens [finaliseWordAnalyse, NewLine c] $
+                   withClearedWordAnalyseMemory $
+                   withPreviousCommentAnalyseMemory $
+                   withoutWordAnalyseMode $
+                   withoutCommentAnalyseMode
+                   withNextIndex
+             | otherwise ->
+                 continueAnalysing $
+                   withNewToken (NewLine c) $
+                   withPreviousWordAnalyseMemory $
+                   withPreviousCommentAnalyseMemory $
+                   withoutWordAnalyseMode $
+                   withoutCommentAnalyseMode
+                   withNextIndex
     | c `elem` symbols =
         case () of
-          () | wordAnalyse -> withNewTokens [finaliseWordAnalyse, Symbol c] $
-                                withClearedMemory $
-                                withoutWordAnalysing $
-                                withoutCommentAnalysing
-                                continueAnalysing
-             | otherwise   -> withNewToken (Symbol c) $
-                                withoutNewMemoryChar $
-                                withoutWordAnalysing $
-                                withoutCommentAnalysing
-                                continueAnalysing
+          () | wordAnalyse ->
+                 continueAnalysing $
+                   withNewTokens [finaliseWordAnalyse, Symbol c] $
+                   withClearedWordAnalyseMemory $
+                   withPreviousCommentAnalyseMemory $
+                   withoutWordAnalyseMode $
+                   withoutCommentAnalyseMode
+                   withNextIndex
+             | otherwise ->
+                 continueAnalysing $
+                   withNewToken (Symbol c) $
+                   withPreviousWordAnalyseMemory $
+                   withPreviousCommentAnalyseMemory $
+                   withoutWordAnalyseMode $
+                   withoutCommentAnalyseMode
+                   withNextIndex
     | c `elem` letters =
-        withoutNewToken $
-          withNewMemoryChar c $
-          withWordAnalysing $
-          withoutCommentAnalysing
-          continueAnalysing
+        continueAnalysing $
+          withPreviousTokens $
+          withMoreWordAnalyseMemory c $
+          withPreviousCommentAnalyseMemory $
+          withWordAnalyseMode $
+          withoutCommentAnalyseMode
+          withNextIndex
     | c `elem` digits =
-        withoutNewToken $
-          withNewMemoryChar c $
-          withWordAnalysing $
-          withoutCommentAnalysing
-          continueAnalysing
-    | otherwise = Left $ UnexpectedCharacter index sourceCode c
+        continueAnalysing $
+          withPreviousTokens $
+          withMoreWordAnalyseMemory c $
+          withPreviousCommentAnalyseMemory $
+          withWordAnalyseMode $
+          withoutCommentAnalyseMode
+          withNextIndex
+    | otherwise =
+        case () of
+          () | commentAnalyse ->
+                 continueAnalysing $
+                   withPreviousTokens $
+                   withPreviousWordAnalyseMemory $
+                   withMoreCommentAnalyseMemory c $
+                   withPreviousWordAnalyseMode $
+                   withCommentAnalyseMode
+                   withNextIndex
+             | otherwise ->
+                 Left $ UnexpectedCharacter index' sourceCode c
     where
-    reachedToBottom = index >= length sourceCode
-    c = sourceCode !! index
+    index' = index state
+    wordAnalyse = analysingWord state
+    commentAnalyse = analysingComment state
+    wordMemory = wordAnalyseMemory state
+    commentMemory = commentAnalyseMemory state
 
-    withNewTokens :: [Token] -> ((?token :: [Token]) => AnalyseResult) -> AnalyseResult
-    withNewTokens newTokens f = let ?token = tokens ++ newTokens in f
-    withNewToken :: Token -> ((?token :: [Token]) => AnalyseResult) -> AnalyseResult
-    withNewToken newToken f = let ?token = tokens ++ [newToken] in f
-    withoutNewToken :: ((?token :: [Token]) => AnalyseResult) -> AnalyseResult
-    withoutNewToken f = let ?token = tokens in f
+    reachedToBottom = index' >= length sourceCode
+    c = sourceCode !! index'
 
-    withNewMemoryChar :: (?token :: [Token])
-                      => Char
-                      -> ((?token :: [Token], ?memory :: String) => AnalyseResult)
-                      -> AnalyseResult
-    withNewMemoryChar mc f = let ?memory = memory ++ [mc] in f
-    withoutNewMemoryChar :: (?token ::[Token])
-                         => ((?token :: [Token], ?memory :: String) => AnalyseResult)
-                         -> AnalyseResult
-    withoutNewMemoryChar f = let ?memory = memory in f
-    withClearedMemory :: (?token :: [Token])
-                      => ((?token :: [Token], ?memory :: String) => AnalyseResult)
-                      -> AnalyseResult
-    withClearedMemory f = let ?memory = "" in f
-
-    withWordAnalysing :: (?token :: [Token], ?memory :: String)
-                      => ((?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool) => AnalyseResult)
-                      -> AnalyseResult
-    withWordAnalysing f = let ?wordAnalyse = True in f
-    withoutWordAnalysing :: (?token :: [Token], ?memory :: String)
-                         => ((?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool) => AnalyseResult)
-                         -> AnalyseResult
-    withoutWordAnalysing f = let ?wordAnalyse = False in f
-
-    withCommentAnalysing :: (?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool)
-                         => ((?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool, ?commentAnalyse :: Bool) => AnalyseResult)
-                         -> AnalyseResult
-    withCommentAnalysing f = let ?commentAnalyse = True in f
-    withoutCommentAnalysing :: (?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool)
-                            => ((?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool, ?commentAnalyse :: Bool) => AnalyseResult)
-                            -> AnalyseResult
-    withoutCommentAnalysing f = let ?commentAnalyse = False in f
-
-    continueAnalysing :: (?token :: [Token], ?memory :: String, ?wordAnalyse :: Bool, ?commentAnalyse :: Bool) => AnalyseResult
-    continueAnalysing = analyse ?token ?memory ?wordAnalyse ?commentAnalyse (index + 1)
+    continueAnalysing :: (State -> State) -> AnalyseResult
+    continueAnalysing f = analyse $ f state
 
     finaliseWordAnalyse :: Token
     finaliseWordAnalyse
-      | memory `elem` keywords     = Keyword memory
-      | all (`elem` digits) memory = Number memory
-      | otherwise                  = Identifier memory
+      | wordMemory `elem` keywords     = Keyword wordMemory
+      | all (`elem` digits) wordMemory = Number wordMemory
+      | otherwise                      = Identifier wordMemory
 
