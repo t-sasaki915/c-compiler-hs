@@ -1,6 +1,7 @@
 module LexicalAnalyserTest
   ( lexicalAnalyseTest1
   , lexicalAnalyseTest2
+  , lexicalAnalyseTest3
   ) where
 
 import           LexicalAnalyser
@@ -39,4 +40,27 @@ lexicalAnalyseTest2 = TestCase (
     [ Keyword "int", Whitespace ' ', Identifier "main", Symbol '('
     , Keyword "void", Symbol ')', Symbol '{', Keyword "return"
     , Whitespace ' ', Number "2", Symbol ';', Symbol '}'
+    ]
+
+lexicalAnalyseTest3 :: Test
+lexicalAnalyseTest3 = TestCase (
+    assertEqual "lexicalAnalyseTest 3"
+                (lexicalAnalyse sourceCode)
+                expected
+  )
+  where
+  sourceCode = concat
+    [ "// Comment 1\n"
+    , "int main (void) //Comment2\n"
+    , "{\n"
+    , "  // Comment 3!!!!\n"
+    , "  return 0;\n"
+    , "}"
+    ]
+  expected = Right
+    [ Comment "// Comment 1", NewLine '\n', Keyword "int", Whitespace ' ', Identifier "main"
+    , Whitespace ' ', Symbol '(', Keyword "void", Symbol ')', Whitespace ' ', Comment "//Comment2"
+    , NewLine '\n', Symbol '{', NewLine '\n', Whitespace ' ', Whitespace ' ', Comment "// Comment 3!!!!"
+    , NewLine '\n', Whitespace ' ', Whitespace ' ', Keyword "return", Whitespace ' ', Number "0"
+    , Symbol ';', NewLine '\n', Symbol '}'
     ]
