@@ -31,8 +31,6 @@ withClearedWordAnalyseMemory f s ts = f s ts ""
 
 withMoreCommentAnalyseMemory :: Char -> (State -> [Token] -> String -> String -> State) -> State -> [Token] -> String -> State
 withMoreCommentAnalyseMemory c f s ts wm = f s ts wm (commentAnalyseMemory s ++ [c])
-withPreviousCommentAnalyseMemory :: (State -> [Token] -> String -> String -> State) -> State -> [Token] -> String -> State
-withPreviousCommentAnalyseMemory f s ts wm = f s ts wm (commentAnalyseMemory s)
 withClearedCommentAnalyseMemory :: (State -> [Token] -> String -> String -> State) -> State -> [Token] -> String -> State
 withClearedCommentAnalyseMemory f s ts wm = f s ts wm ""
 
@@ -47,8 +45,6 @@ withCommentAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> Bool 
 withCommentAnalyseMode f s ts wm cm wa = f s ts wm cm wa True
 withoutCommentAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> State
 withoutCommentAnalyseMode f s ts wm cm wa = f s ts wm cm wa False
-withPreviousCommentAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> State
-withPreviousCommentAnalyseMode f s ts wm cm wa = f s ts wm cm wa (analysingComment s)
 
 withNewIndex :: Int -> State -> [Token] -> String -> String -> Bool -> Bool -> State
 withNewIndex i s ts wm cm wa ca = State ts wm cm wa ca (index s + i)
@@ -64,80 +60,134 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False 0
         case () of
           () | commentAnalyse ->
                  case () of
-                   () | wordAnalyse -> Right $ tokens state ++ [finaliseWordAnalyse, Comment commentMemory]
+                   () | wordAnalyse -> Right $ tokens state ++ [Comment commentMemory, finaliseWordAnalyse]
                       | otherwise   -> Right $ tokens state ++ [Comment commentMemory]
              | wordAnalyse -> Right $ tokens state ++ [finaliseWordAnalyse]
              | otherwise -> Right $ tokens state
     | c `elem` whitespaces =
         case () of
-          () | wordAnalyse ->
+          () | commentAnalyse ->
+                 continueAnalysing $
+                   withPreviousTokens $
+                   withPreviousWordAnalyseMemory $
+                   withMoreCommentAnalyseMemory c $
+                   withPreviousWordAnalyseMode $
+                   withCommentAnalyseMode
+                   withNextIndex
+             | wordAnalyse ->
                  continueAnalysing $
                    withNewTokens [finaliseWordAnalyse, Whitespace c] $
                    withClearedWordAnalyseMemory $
-                   withPreviousCommentAnalyseMemory $
+                   withClearedCommentAnalyseMemory $
                    withoutWordAnalyseMode $
                    withoutCommentAnalyseMode
                    withNextIndex
              | otherwise ->
                  continueAnalysing $
                    withNewToken (Whitespace c) $
-                   withPreviousWordAnalyseMemory $
-                   withPreviousCommentAnalyseMemory $
+                   withClearedWordAnalyseMemory $
+                   withClearedCommentAnalyseMemory $
                    withoutWordAnalyseMode $
                    withoutCommentAnalyseMode
                    withNextIndex
     | c `elem` newLines =
         case () of
-          () | wordAnalyse ->
+          () | commentAnalyse ->
+                 case () of
+                   () | wordAnalyse ->
+                          continueAnalysing $
+                            withNewTokens [Comment commentMemory, finaliseWordAnalyse, NewLine c] $
+                            withClearedWordAnalyseMemory $
+                            withClearedCommentAnalyseMemory $
+                            withoutWordAnalyseMode $
+                            withoutCommentAnalyseMode
+                            withNextIndex
+                      | otherwise ->
+                          continueAnalysing $
+                            withNewTokens [Comment commentMemory, NewLine c] $
+                            withClearedWordAnalyseMemory $
+                            withClearedCommentAnalyseMemory $
+                            withoutWordAnalyseMode $
+                            withoutCommentAnalyseMode
+                            withNextIndex
+             | wordAnalyse ->
                  continueAnalysing $
                    withNewTokens [finaliseWordAnalyse, NewLine c] $
                    withClearedWordAnalyseMemory $
-                   withPreviousCommentAnalyseMemory $
+                   withClearedCommentAnalyseMemory $
                    withoutWordAnalyseMode $
                    withoutCommentAnalyseMode
                    withNextIndex
              | otherwise ->
                  continueAnalysing $
                    withNewToken (NewLine c) $
-                   withPreviousWordAnalyseMemory $
-                   withPreviousCommentAnalyseMemory $
+                   withClearedWordAnalyseMemory $
+                   withClearedCommentAnalyseMemory $
                    withoutWordAnalyseMode $
                    withoutCommentAnalyseMode
                    withNextIndex
     | c `elem` symbols =
         case () of
-          () | wordAnalyse ->
+          () | commentAnalyse ->
+                 continueAnalysing $
+                   withPreviousTokens $
+                   withPreviousWordAnalyseMemory $
+                   withMoreCommentAnalyseMemory c $
+                   withPreviousWordAnalyseMode $
+                   withCommentAnalyseMode
+                   withNextIndex
+             | wordAnalyse ->
                  continueAnalysing $
                    withNewTokens [finaliseWordAnalyse, Symbol c] $
                    withClearedWordAnalyseMemory $
-                   withPreviousCommentAnalyseMemory $
+                   withClearedCommentAnalyseMemory $
                    withoutWordAnalyseMode $
                    withoutCommentAnalyseMode
                    withNextIndex
              | otherwise ->
                  continueAnalysing $
                    withNewToken (Symbol c) $
-                   withPreviousWordAnalyseMemory $
-                   withPreviousCommentAnalyseMemory $
+                   withClearedWordAnalyseMemory $
+                   withClearedCommentAnalyseMemory $
                    withoutWordAnalyseMode $
                    withoutCommentAnalyseMode
                    withNextIndex
     | c `elem` letters =
-        continueAnalysing $
-          withPreviousTokens $
-          withMoreWordAnalyseMemory c $
-          withPreviousCommentAnalyseMemory $
-          withWordAnalyseMode $
-          withoutCommentAnalyseMode
-          withNextIndex
+        case () of
+          () | commentAnalyse ->
+                 continueAnalysing $
+                   withPreviousTokens $
+                   withPreviousWordAnalyseMemory $
+                   withMoreCommentAnalyseMemory c $
+                   withPreviousWordAnalyseMode $
+                   withCommentAnalyseMode
+                   withNextIndex
+             | otherwise ->
+                 continueAnalysing $
+                   withPreviousTokens $
+                   withMoreWordAnalyseMemory c $
+                   withClearedCommentAnalyseMemory $
+                   withWordAnalyseMode $
+                   withoutCommentAnalyseMode
+                   withNextIndex
     | c `elem` digits =
-        continueAnalysing $
-          withPreviousTokens $
-          withMoreWordAnalyseMemory c $
-          withPreviousCommentAnalyseMemory $
-          withWordAnalyseMode $
-          withoutCommentAnalyseMode
-          withNextIndex
+        case () of
+          () | commentAnalyse ->
+                 continueAnalysing $
+                   withPreviousTokens $
+                   withPreviousWordAnalyseMemory $
+                   withMoreCommentAnalyseMemory c $
+                   withPreviousWordAnalyseMode $
+                   withCommentAnalyseMode
+                   withNextIndex
+             | otherwise ->
+                 continueAnalysing $
+                   withPreviousTokens $
+                   withMoreWordAnalyseMemory c $
+                   withClearedCommentAnalyseMemory $
+                   withWordAnalyseMode $
+                   withoutCommentAnalyseMode
+                   withNextIndex
     | otherwise =
         case () of
           () | commentAnalyse ->
