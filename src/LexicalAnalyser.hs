@@ -66,8 +66,8 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False 0
                  case () of
                    () | wordAnalyse -> Right $ tokens state ++ [finaliseWordAnalyse, Comment commentMemory]
                       | otherwise   -> Right $ tokens state ++ [Comment commentMemory]
-             | wordAnalyse    -> Right $ tokens state ++ [finaliseWordAnalyse]
-             | otherwise      -> Right $ tokens state
+             | wordAnalyse -> Right $ tokens state ++ [finaliseWordAnalyse]
+             | otherwise -> Right $ tokens state
     | c `elem` whitespaces =
         case () of
           () | wordAnalyse ->
