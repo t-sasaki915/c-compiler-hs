@@ -22,7 +22,7 @@ main = do
 
             Left lexicalAnalyseErr -> do
               putStrLn "Lexical Analysation failed."
-              putStrLn $ "Because: " ++ show lexicalAnalyseErr
+              putStrLn $ "Because of: " ++ show lexicalAnalyseErr
 
         Left readErr -> do
           print readErr
