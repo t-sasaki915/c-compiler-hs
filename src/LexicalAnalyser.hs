@@ -136,6 +136,34 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False 0
                    withPreviousWordAnalyseMode $
                    withCommentAnalyseMode
                    withNextIndex
+             | c == '/' ->
+                 case sourceCode !? (index' + 1) of
+                   Just '/' ->
+                     continueAnalysing $
+                       withPreviousTokens $
+                       withPreviousWordAnalyseMemory $
+                       withMoreCommentAnalyseMemory c $
+                       withPreviousWordAnalyseMode $
+                       withCommentAnalyseMode
+                       withNextIndex
+                   _ ->
+                     case () of
+                       () | wordAnalyse ->
+                              continueAnalysing $
+                                withNewTokens [finaliseWordAnalyse, Symbol c] $
+                                withClearedWordAnalyseMemory $
+                                withClearedCommentAnalyseMemory $
+                                withoutWordAnalyseMode $
+                                withoutCommentAnalyseMode
+                                withNextIndex
+                          | otherwise ->
+                              continueAnalysing $
+                                withNewToken (Symbol c) $
+                                withClearedWordAnalyseMemory $
+                                withClearedCommentAnalyseMemory $
+                                withoutWordAnalyseMode $
+                                withoutCommentAnalyseMode
+                                withNextIndex
              | wordAnalyse ->
                  continueAnalysing $
                    withNewTokens [finaliseWordAnalyse, Symbol c] $
@@ -219,3 +247,8 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False 0
       | all (`elem` digits) wordMemory = Number wordMemory
       | otherwise                      = Identifier wordMemory
 
+    (!?) :: String -> Int -> Maybe Char
+    (!?) xs n
+      | n < 0          = Nothing
+      | n >= length xs = Nothing
+      | otherwise      = Just $ xs !! n
