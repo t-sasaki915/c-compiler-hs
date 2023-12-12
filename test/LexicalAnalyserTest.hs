@@ -2,6 +2,7 @@ module LexicalAnalyserTest
   ( lexicalAnalyseTest1
   , lexicalAnalyseTest2
   , lexicalAnalyseTest3
+  , lexicalAnalyseTest4
   ) where
 
 import           LexicalAnalyser
@@ -64,3 +65,32 @@ lexicalAnalyseTest3 = TestCase (
     , NewLine '\n', Whitespace ' ', Whitespace ' ', Keyword "return", Whitespace ' ', Number "0"
     , Symbol ';', NewLine '\n', Symbol '}'
     ]
+
+lexicalAnalyseTest4 :: Test
+lexicalAnalyseTest4 = TestCase (
+    assertEqual "lexicalAnalyseTest 4"
+                (lexicalAnalyse sourceCode)
+                expected
+  )
+  where
+  sourceCode = concat
+    [ "// aa /* bb */ cc\n"
+    , "/* aa // bb cc */\n"
+    , "/* aaa\n"
+    , " * bbb\n"
+    , " */\n"
+    , "int /* type of 'main' */ main /* entrypoint */ (void) {\n"
+    , "  // exitSuccess\n"
+    , "  return 0;\n"
+    , "}"
+    ]
+  expected = Right
+    [ Comment "// aa /* bb */ cc", NewLine '\n', Comment "/* aa // bb cc */", NewLine '\n'
+    , Comment "/* aaa\n * bbb\n */", NewLine '\n', Keyword "int", Whitespace ' '
+    , Comment "/* type of 'main' */", Whitespace ' ', Identifier "main", Whitespace ' '
+    , Comment "/* entrypoint */", Whitespace ' ', Symbol '(', Keyword "void", Symbol ')'
+    , Whitespace ' ', Symbol '{', NewLine '\n', Whitespace ' ', Whitespace ' '
+    , Comment "// exitSuccess", NewLine '\n', Whitespace ' ', Whitespace ' '
+    , Keyword "return", Whitespace ' ', Number "0", Symbol ';', NewLine '\n', Symbol '}'
+    ]
+

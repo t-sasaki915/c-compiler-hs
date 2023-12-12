@@ -11,6 +11,7 @@ main = do
       [ TestLabel "lexicalAnalyseTest 1"       lexicalAnalyseTest1
       , TestLabel "lexicalAnalyseTest 2"       lexicalAnalyseTest2
       , TestLabel "lexicalAnalyseTest 3"       lexicalAnalyseTest3
+      , TestLabel "lexicalAnalyseTest 4"       lexicalAnalyseTest4
       , TestLabel "calculateLineTest 1"        calculateLineTest1
       , TestLabel "calculateLineTest 2"        calculateLineTest2
       , TestLabel "calculateLineTest 3"        calculateLineTest3
