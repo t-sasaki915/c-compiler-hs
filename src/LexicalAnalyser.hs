@@ -3,8 +3,8 @@ module LexicalAnalyser (lexicalAnalyse) where
 import           Constant
 import           LexicalAnalyseException
 import           Token
+import           Util                    (isPrefixOf', (!?))
 
-import           Data.List               (isPrefixOf)
 import           Data.Maybe              (isJust)
 import           Text.Regex              (matchRegex)
 
@@ -329,16 +329,10 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
     finaliseWordAnalyseAnd f
       | wordMemory `elem` keywords =
           f $ Keyword wordMemory
-      | any (\x -> [x] `isPrefixOf` wordMemory) digits =
+      | any (`isPrefixOf'` wordMemory) digits =
           case () of
             () | isJust $ matchRegex numberFormat wordMemory -> f $ Number wordMemory
                | otherwise -> Left $ InvalidNumberFormat index' sourceCode wordMemory
       | otherwise =
           f $ Identifier wordMemory
-
-    (!?) :: String -> Int -> Maybe Char
-    (!?) xs n
-      | n < 0          = Nothing
-      | n >= length xs = Nothing
-      | otherwise      = Just $ xs !! n
 

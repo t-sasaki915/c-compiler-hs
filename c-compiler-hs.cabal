@@ -29,6 +29,7 @@ library
       LexicalAnalyser
       SourceCodeUtil
       Token
+      Util
   other-modules:
       Paths_c_compiler_hs
   hs-source-dirs:
