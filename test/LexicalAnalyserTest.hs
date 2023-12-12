@@ -5,6 +5,7 @@ module LexicalAnalyserTest
   , lexicalAnalyseTest4
   , lexicalAnalyseTest5
   , lexicalAnalyseTest6
+  , lexicalAnalyseTest7
   ) where
 
 import           LexicalAnalyseException
@@ -116,3 +117,13 @@ lexicalAnalyseTest6 = TestCase (
   where
   sourceCode = "/* aaa */ /* bbb"
   expected = Left $ UnclosingComment 15 sourceCode
+
+lexicalAnalyseTest7 :: Test
+lexicalAnalyseTest7 = TestCase (
+    assertEqual "lexicalAnalyseTest 7"
+                (lexicalAnalyse sourceCode)
+                expected
+  )
+  where
+  sourceCode = "return 0a;"
+  expected = Left $ InvalidNumberFormat 8 sourceCode "0a"

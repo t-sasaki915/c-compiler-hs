@@ -12,12 +12,12 @@ packages:
   original:
     hackage: extra-1.7.14
 - completed:
-    hackage: regex-compat-0.95.2.1@sha256:96c83b06280ebfb6fef01864b2af9eb9e136a9832c563773f327d4197bbbb851,1705
+    hackage: regex-posix-0.96.0.1@sha256:816d6acc560cb86672f347a7bef8129578dde26ed760f9e79b4976ed9bd7b9fd,2925
     pantry-tree:
-      sha256: 3e65e1219ca48e8988b93151ef6d3d705f57ae65f1ba91e8e8b626c2eaa6b43f
-      size: 262
+      sha256: ea6a3adfad8fb41a761b71afb057454a41eb76fc3f75c926d0bda90588b20529
+      size: 748
   original:
-    hackage: regex-compat-0.95.2.1
+    hackage: regex-posix-0.96.0.1
 - completed:
     hackage: HUnit-1.6.2.0@sha256:1a79174e8af616117ad39464cac9de205ca923da6582825e97c10786fda933a4,1588
     pantry-tree:
