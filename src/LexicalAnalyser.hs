@@ -68,7 +68,7 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
         case () of
           () | commentAnalyse ->
                  case () of
-                   () | not singleLineComment -> Left $ UnclosingComment index' sourceCode
+                   () | not singleLineComment -> Left $ UnclosingComment (index' - 1) sourceCode
                       | wordAnalyse           -> Right $ tokens state ++ [Comment commentMemory, finaliseWordAnalyse]
                       | otherwise             -> Right $ tokens state ++ [Comment commentMemory]
              | wordAnalyse -> Right $ tokens state ++ [finaliseWordAnalyse]

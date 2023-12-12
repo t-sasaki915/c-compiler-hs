@@ -3,8 +3,11 @@ module LexicalAnalyserTest
   , lexicalAnalyseTest2
   , lexicalAnalyseTest3
   , lexicalAnalyseTest4
+  , lexicalAnalyseTest5
+  , lexicalAnalyseTest6
   ) where
 
+import           LexicalAnalyseException
 import           LexicalAnalyser
 import           Token
 
@@ -94,3 +97,22 @@ lexicalAnalyseTest4 = TestCase (
     , Keyword "return", Whitespace ' ', Number "0", Symbol ';', NewLine '\n', Symbol '}'
     ]
 
+lexicalAnalyseTest5 :: Test
+lexicalAnalyseTest5 = TestCase (
+    assertEqual "lexicalAnalyseTest 5"
+                (lexicalAnalyse sourceCode)
+                expected
+  )
+  where
+  sourceCode = "/* @ */ int @main (void) {}"
+  expected = Left $ UnexpectedCharacter 12 sourceCode '@'
+
+lexicalAnalyseTest6 :: Test
+lexicalAnalyseTest6 = TestCase (
+    assertEqual "lexicalAnalyseTest 6"
+                (lexicalAnalyse sourceCode)
+                expected
+  )
+  where
+  sourceCode = "/* aaa */ /* bbb"
+  expected = Left $ UnclosingComment 15 sourceCode
