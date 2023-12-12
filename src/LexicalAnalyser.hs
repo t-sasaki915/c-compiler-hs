@@ -4,6 +4,10 @@ import           Constant
 import           LexicalAnalyseException
 import           Token
 
+import           Data.List               (isPrefixOf)
+import           Data.Maybe              (isJust)
+import           Text.Regex              (matchRegex)
+
 type AnalyseResult = Either LexicalAnalyseException [Token]
 
 data State = State
@@ -68,11 +72,18 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
         case () of
           () | commentAnalyse ->
                  case () of
-                   () | not singleLineComment -> Left $ UnclosingComment (index' - 1) sourceCode
-                      | wordAnalyse           -> Right $ tokens state ++ [Comment commentMemory, finaliseWordAnalyse]
-                      | otherwise             -> Right $ tokens state ++ [Comment commentMemory]
-             | wordAnalyse -> Right $ tokens state ++ [finaliseWordAnalyse]
-             | otherwise -> Right $ tokens state
+                   () | not singleLineComment ->
+                          Left $ UnclosingComment (index' - 1) sourceCode
+                      | wordAnalyse ->
+                          finaliseWordAnalyseAnd $ \wordToken ->
+                            Right $ tokens state ++ [Comment commentMemory, wordToken]
+                      | otherwise ->
+                          Right $ tokens state ++ [Comment commentMemory]
+             | wordAnalyse ->
+                 finaliseWordAnalyseAnd $ \wordToken ->
+                   Right $ tokens state ++ [wordToken]
+             | otherwise ->
+                 Right $ tokens state
     | c `elem` whitespaces =
         case () of
           () | commentAnalyse ->
@@ -85,14 +96,15 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                    withPreviousSingleLineCommentMode
                    withNextIndex
              | wordAnalyse ->
-                 continueAnalysing $
-                   withNewTokens [finaliseWordAnalyse, Whitespace c] $
-                   withClearedWordAnalyseMemory $
-                   withClearedCommentAnalyseMemory $
-                   withoutWordAnalyseMode $
-                   withoutCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                 finaliseWordAnalyseAnd $ \wordToken ->
+                   continueAnalysing $
+                     withNewTokens [wordToken, Whitespace c] $
+                     withClearedWordAnalyseMemory $
+                     withClearedCommentAnalyseMemory $
+                     withoutWordAnalyseMode $
+                     withoutCommentAnalyseMode $
+                     withPreviousSingleLineCommentMode
+                     withNextIndex
              | otherwise ->
                  continueAnalysing $
                    withNewToken (Whitespace c) $
@@ -116,14 +128,15 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                             withoutSingleLineCommentMode
                             withNextIndex
                       | wordAnalyse ->
-                          continueAnalysing $
-                            withNewTokens [Comment commentMemory, finaliseWordAnalyse, NewLine c] $
-                            withClearedWordAnalyseMemory $
-                            withClearedCommentAnalyseMemory $
-                            withoutWordAnalyseMode $
-                            withoutCommentAnalyseMode $
-                            withPreviousSingleLineCommentMode
-                            withNextIndex
+                          finaliseWordAnalyseAnd $ \wordToken ->
+                            continueAnalysing $
+                              withNewTokens [Comment commentMemory, wordToken, NewLine c] $
+                              withClearedWordAnalyseMemory $
+                              withClearedCommentAnalyseMemory $
+                              withoutWordAnalyseMode $
+                              withoutCommentAnalyseMode $
+                              withPreviousSingleLineCommentMode
+                              withNextIndex
                       | otherwise ->
                           continueAnalysing $
                             withNewTokens [Comment commentMemory, NewLine c] $
@@ -134,14 +147,15 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                             withPreviousSingleLineCommentMode
                             withNextIndex
              | wordAnalyse ->
-                 continueAnalysing $
-                   withNewTokens [finaliseWordAnalyse, NewLine c] $
-                   withClearedWordAnalyseMemory $
-                   withClearedCommentAnalyseMemory $
-                   withoutWordAnalyseMode $
-                   withoutCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                 finaliseWordAnalyseAnd $ \wordToken ->
+                   continueAnalysing $
+                     withNewTokens [wordToken, NewLine c] $
+                     withClearedWordAnalyseMemory $
+                     withClearedCommentAnalyseMemory $
+                     withoutWordAnalyseMode $
+                     withoutCommentAnalyseMode $
+                     withPreviousSingleLineCommentMode
+                     withNextIndex
              | otherwise ->
                  continueAnalysing $
                    withNewToken (NewLine c) $
@@ -207,14 +221,15 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                    _ ->
                      case () of
                        () | wordAnalyse ->
-                              continueAnalysing $
-                                withNewTokens [finaliseWordAnalyse, Symbol c] $
-                                withClearedWordAnalyseMemory $
-                                withClearedCommentAnalyseMemory $
-                                withoutWordAnalyseMode $
-                                withoutCommentAnalyseMode $
-                                withPreviousSingleLineCommentMode
-                                withNextIndex
+                              finaliseWordAnalyseAnd $ \wordToken ->
+                                continueAnalysing $
+                                  withNewTokens [wordToken, Symbol c] $
+                                  withClearedWordAnalyseMemory $
+                                  withClearedCommentAnalyseMemory $
+                                  withoutWordAnalyseMode $
+                                  withoutCommentAnalyseMode $
+                                  withPreviousSingleLineCommentMode
+                                  withNextIndex
                           | otherwise ->
                               continueAnalysing $
                                 withNewToken (Symbol c) $
@@ -225,14 +240,15 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                                 withPreviousSingleLineCommentMode
                                 withNextIndex
              | wordAnalyse ->
-                 continueAnalysing $
-                   withNewTokens [finaliseWordAnalyse, Symbol c] $
-                   withClearedWordAnalyseMemory $
-                   withClearedCommentAnalyseMemory $
-                   withoutWordAnalyseMode $
-                   withoutCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                 finaliseWordAnalyseAnd $ \wordToken ->
+                   continueAnalysing $
+                     withNewTokens [wordToken, Symbol c] $
+                     withClearedWordAnalyseMemory $
+                     withClearedCommentAnalyseMemory $
+                     withoutWordAnalyseMode $
+                     withoutCommentAnalyseMode $
+                     withPreviousSingleLineCommentMode
+                     withNextIndex
              | otherwise ->
                  continueAnalysing $
                    withNewToken (Symbol c) $
@@ -309,14 +325,20 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
     continueAnalysing :: (State -> State) -> AnalyseResult
     continueAnalysing f = analyse $ f state
 
-    finaliseWordAnalyse :: Token
-    finaliseWordAnalyse
-      | wordMemory `elem` keywords     = Keyword wordMemory
-      | all (`elem` digits) wordMemory = Number wordMemory
-      | otherwise                      = Identifier wordMemory
+    finaliseWordAnalyseAnd :: (Token -> AnalyseResult) -> AnalyseResult
+    finaliseWordAnalyseAnd f
+      | wordMemory `elem` keywords =
+          f $ Keyword wordMemory
+      | any (\x -> [x] `isPrefixOf` wordMemory) digits =
+          case () of
+            () | isJust $ matchRegex numberFormat wordMemory -> f $ Number wordMemory
+               | otherwise -> Left $ InvalidNumberFormat index' sourceCode wordMemory
+      | otherwise =
+          f $ Identifier wordMemory
 
     (!?) :: String -> Int -> Maybe Char
     (!?) xs n
       | n < 0          = Nothing
       | n >= length xs = Nothing
       | otherwise      = Just $ xs !! n
+

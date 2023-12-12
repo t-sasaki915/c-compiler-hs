@@ -5,7 +5,10 @@ module Constant
   , digits
   , whitespaces
   , newLines
+  , numberFormat
   ) where
+
+import           Text.Regex (Regex, mkRegex)
 
 keywords :: [String]
 keywords = [ "int" , "return", "void" ]
@@ -28,3 +31,6 @@ whitespaces = [ ' ', '\r', '\t', '\v', '\f' ]
 
 newLines :: [Char]
 newLines = [ '\n' ]
+
+numberFormat :: Regex
+numberFormat = mkRegex "[0-9]+(\\.[0-9]+)?"

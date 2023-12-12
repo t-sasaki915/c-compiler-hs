@@ -6,6 +6,7 @@ import           Control.Exception
 
 data LexicalAnalyseException = UnexpectedCharacter Int String Char
                              | UnclosingComment Int String
+                             | InvalidNumberFormat Int String String
                              deriving Eq
 
 instance Exception LexicalAnalyseException
@@ -23,4 +24,6 @@ instance Show LexicalAnalyseException where
     "Unexpected character '" ++ [c] ++ "' at " ++ lineAndIndex i src
   show (UnclosingComment i src) =
     "Unclosing comment at" ++ lineAndIndex i src
+  show (InvalidNumberFormat i src s) =
+    "Invalid number format '" ++ s ++ "' at " ++ lineAndIndex i src
 
