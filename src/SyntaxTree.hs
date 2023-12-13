@@ -7,7 +7,9 @@ import           Data.List (intercalate)
 data Syntax = Program
             | DeclarationList
             | Declaration
+            | DeclarationLabel Token
             | TypeSpecifier Token
+            | DeclarationArgument
             deriving (Eq, Show)
 
 data SyntaxTree = Node
