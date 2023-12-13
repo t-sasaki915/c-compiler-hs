@@ -28,6 +28,9 @@ library
       LexicalAnalyseException
       LexicalAnalyser
       SourceCodeUtil
+      SyntaxAnalyseException
+      SyntaxAnalyser
+      SyntaxTree
       Token
       Util
   other-modules:

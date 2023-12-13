@@ -6,6 +6,7 @@ import           System.Environment (getArgs, getProgName)
 import           System.Exit        (exitFailure)
 
 import           LexicalAnalyser
+import           SyntaxAnalyser
 
 main :: IO ()
 main = do
@@ -17,12 +18,21 @@ main = do
       case sourceOrErr of
         Right sourceCode -> do
           case lexicalAnalyse sourceCode of
-            Right tokens ->
+            Right tokens -> do
               print tokens
+              case syntaxAnalyse tokens of
+                Right syntaxTree ->
+                  print syntaxTree
+
+                Left syntaxAnalyseErr -> do
+                  putStrLn "Syntax Analysation failed."
+                  putStrLn $ "Because of: " ++ show syntaxAnalyseErr
+                  exitFailure
 
             Left lexicalAnalyseErr -> do
               putStrLn "Lexical Analysation failed."
               putStrLn $ "Because of: " ++ show lexicalAnalyseErr
+              exitFailure
 
         Left readErr -> do
           print readErr
