@@ -21,7 +21,8 @@ syntaxAnalyseTest1 = TestCase (
     [ "int main (void) {}\n"
     , "void aaa (void) {}\n"
     , "void bbb (int a) {}\n"
-    , "int ccc (int a, int b) {}"
+    , "int ccc (int a, int b) {}\n"
+    , "int ddd () {}"
     ]
   expected = Right $
     Node Program
@@ -53,6 +54,10 @@ syntaxAnalyseTest1 = TestCase (
                   [ Node (TypeSpecifier (Keyword "int")) []
                   , Node (DeclarationLabel (Identifier "b")) []
                   ]
+              ]
+          , Node Declaration
+              [ Node (TypeSpecifier (Keyword "int")) []
+              , Node (DeclarationLabel (Identifier "ddd")) []
               ]
           ]
       ]

@@ -152,7 +152,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                       withDecAnalyseStep AnalyseArgumentLabel
                       withNextIndex
                   _ ->
-                    Left $ UnexpectedToken t "Type"
+                    Left $ UnexpectedToken t "Type or ')'"
 
               _ ->
                 contextualUnexpectedTokenHalt
@@ -197,6 +197,20 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                       withNextIndex
                   _ ->
                     Left $ UnexpectedToken t "'('"
+
+              AnalyseArgumentType ->
+                case symbol of
+                  ')' ->
+                    continueAnalysing $
+                      withPreviousDecs $
+                      withPreviousDecType $
+                      withPreviousDecLabel $
+                      withPreviousDecArgTypes $
+                      withPreviousDecArgLabels $
+                      withDecAnalyseStep AnalyseOpenBracket
+                      withNextIndex
+                  _ ->
+                    Left $ UnexpectedToken t "Type or ')'"
 
               AnalyseArgumentSeparator ->
                 case symbol of
@@ -298,7 +312,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
             AnalyseType              -> "Type"
             AnalyseLabel             -> "Identifier"
             AnalyseOpenParentheses   -> "'('"
-            AnalyseArgumentType      -> "Type"
+            AnalyseArgumentType      -> "Type or ')'"
             AnalyseArgumentLabel     -> "Identifier"
             AnalyseArgumentSeparator -> "',' or ')'"
             AnalyseCloseParentheses  -> "')'"
