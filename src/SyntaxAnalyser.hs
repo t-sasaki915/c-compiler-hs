@@ -16,8 +16,8 @@ data DeclarationAnalyseStep = AnalyseType
                             | AnalyseArgumentLabel
                             | AnalyseArgumentSeparator
                             | AnalyseCloseParentheses
-                            | AnalyseOpenBracket
-                            | AnalyseCloseBracket
+                            | AnalyseOpenBraces
+                            | AnalyseCloseBraces
 
 data State = State
   { declarationList      :: [SyntaxTree]
@@ -207,7 +207,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                       withPreviousDecLabel $
                       withPreviousDecArgTypes $
                       withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseOpenBracket
+                      withDecAnalyseStep AnalyseOpenBraces
                       withNextIndex
                   _ ->
                     Left $ UnexpectedToken t "Type or ')'"
@@ -230,7 +230,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                       withPreviousDecLabel $
                       withPreviousDecArgTypes $
                       withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseOpenBracket
+                      withDecAnalyseStep AnalyseOpenBraces
                       withNextIndex
                   _ ->
                     Left $ UnexpectedToken t "',' or ')'"
@@ -244,12 +244,12 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                       withPreviousDecLabel $
                       withPreviousDecArgTypes $
                       withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseOpenBracket
+                      withDecAnalyseStep AnalyseOpenBraces
                       withNextIndex
                   _ ->
                     Left $ UnexpectedToken t "')'"
 
-              AnalyseOpenBracket ->
+              AnalyseOpenBraces ->
                 case symbol of
                   '{' ->
                     continueAnalysing $
@@ -258,12 +258,12 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                       withPreviousDecLabel $
                       withPreviousDecArgTypes $
                       withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseCloseBracket
+                      withDecAnalyseStep AnalyseCloseBraces
                       withNextIndex
                   _ ->
                     Left $ UnexpectedToken t "'{'"
 
-              AnalyseCloseBracket ->
+              AnalyseCloseBraces ->
                 case symbol of
                   '}' ->
                     continueAnalysing $
@@ -316,6 +316,6 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
             AnalyseArgumentLabel     -> "Identifier"
             AnalyseArgumentSeparator -> "',' or ')'"
             AnalyseCloseParentheses  -> "')'"
-            AnalyseOpenBracket       -> "'{'"
-            AnalyseCloseBracket      -> "'}'"
+            AnalyseOpenBraces        -> "'{'"
+            AnalyseCloseBraces       -> "'}'"
 
