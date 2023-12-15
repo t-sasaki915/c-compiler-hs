@@ -126,14 +126,18 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
               AnalyseArgumentType ->
                 case keyword of
                   "void" ->
-                    continueAnalysing $
-                      withPreviousDecs $
-                      withPreviousDecType $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseCloseParentheses
-                      withNextIndex
+                    case () of
+                      () | null $ declarationArgTypes state ->
+                             continueAnalysing $
+                               withPreviousDecs $
+                               withPreviousDecType $
+                               withPreviousDecLabel $
+                               withPreviousDecArgTypes $
+                               withPreviousDecArgLabels $
+                               withDecAnalyseStep AnalyseCloseParentheses
+                               withNextIndex
+                         | otherwise ->
+                             Left IllegalArgumentDeclaration
                   _ ->
                     case () of
                       () | keyword `elem` typeKeywords ->
