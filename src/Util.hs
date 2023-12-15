@@ -1,4 +1,4 @@
-module Util ((!?), isPrefixOf', matchesPerfectly) where
+module Util ((!?), isPrefixOf', matchesPerfectly, cartesian) where
 
 import           Data.List        (isPrefixOf)
 import           Text.Regex.Posix ((=~))
@@ -14,3 +14,6 @@ isPrefixOf' x = isPrefixOf [x]
 
 matchesPerfectly :: String -> String -> Bool
 matchesPerfectly regex str = str == ((str =~ regex) :: String)
+
+cartesian :: [a] -> [b] -> [(a, b)]
+cartesian xs ys = [ (x, y) | x <- xs, y <- ys ]
