@@ -64,6 +64,7 @@ test-suite c-compiler-hs-test
   other-modules:
       LexicalAnalyserTest
       SourceCodeUtilTest
+      SyntaxAnalyserTest
       Paths_c_compiler_hs
   hs-source-dirs:
       test

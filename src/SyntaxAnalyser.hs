@@ -3,7 +3,7 @@ module SyntaxAnalyser (syntaxAnalyse) where
 import           SyntaxAnalyseException
 import           SyntaxTree
 import           Token
-import           Util                   (cartesian)
+import           Util                   (combineList)
 
 import           Data.Maybe             (fromJust)
 
@@ -36,9 +36,9 @@ confirmDecAnd f s =
   newDeclaration =
     Node Declaration
       (
-        [ Node (DeclarationLabel $ fromJust (declarationLabel s)) []
-        , Node (TypeSpecifier $ fromJust (declarationType s)) []
-        ] ++ map makeArgTree (cartesian (declarationArgTypes s) (declarationArgLabels s))
+        [ Node (TypeSpecifier $ fromJust (declarationType s)) []
+        , Node (DeclarationLabel $ fromJust (declarationLabel s)) []
+        ] ++ map makeArgTree (combineList (declarationArgTypes s) (declarationArgLabels s))
       )
 
   makeArgTree arg =
@@ -254,12 +254,12 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                   '}' ->
                     continueAnalysing $
                       confirmDecAnd $
-                        unsetDecTypeAnd $
-                        unsetDecLabelAnd $
-                        clearDecArgTypesAnd $
-                        clearDecArgLabelsAnd $
-                        withDecAnalyseStep AnalyseType
-                        withNextIndex
+                      unsetDecTypeAnd $
+                      unsetDecLabelAnd $
+                      clearDecArgTypesAnd $
+                      clearDecArgLabelsAnd $
+                      withDecAnalyseStep AnalyseType
+                      withNextIndex
                   _ ->
                     Left $ UnexpectedToken t "'}'"
 
