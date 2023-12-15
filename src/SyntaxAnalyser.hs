@@ -1,5 +1,6 @@
 module SyntaxAnalyser (syntaxAnalyse) where
 
+import           Constant               (typeKeywords)
 import           SyntaxAnalyseException
 import           SyntaxTree
 import           Token
@@ -109,27 +110,18 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
           (Keyword keyword) ->
             case declarationStep' of
               AnalyseType ->
-                case keyword of
-                  "void" ->
-                    continueAnalysing $
-                      withPreviousDecs $
-                      setDecTypeAnd t $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseLabel
-                      withNextIndex
-                  "int" ->
-                    continueAnalysing $
-                      withPreviousDecs $
-                      setDecTypeAnd t $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseLabel
-                      withNextIndex
-                  _ ->
-                    Left $ UnexpectedToken t "Type"
+                case () of
+                  () | keyword `elem` typeKeywords ->
+                         continueAnalysing $
+                           withPreviousDecs $
+                           setDecTypeAnd t $
+                           withPreviousDecLabel $
+                           withPreviousDecArgTypes $
+                           withPreviousDecArgLabels $
+                           withDecAnalyseStep AnalyseLabel
+                           withNextIndex
+                     | otherwise ->
+                         Left $ UnexpectedToken t "Type"
 
               AnalyseArgumentType ->
                 case keyword of
@@ -142,17 +134,19 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                       withPreviousDecArgLabels $
                       withDecAnalyseStep AnalyseCloseParentheses
                       withNextIndex
-                  "int" ->
-                    continueAnalysing $
-                      withPreviousDecs $
-                      withPreviousDecType $
-                      withPreviousDecLabel $
-                      addDecArgTypeAnd t $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseArgumentLabel
-                      withNextIndex
                   _ ->
-                    Left $ UnexpectedToken t "Type or ')'"
+                    case () of
+                      () | keyword `elem` typeKeywords ->
+                             continueAnalysing $
+                               withPreviousDecs $
+                               withPreviousDecType $
+                               withPreviousDecLabel $
+                               addDecArgTypeAnd t $
+                               withPreviousDecArgLabels $
+                               withDecAnalyseStep AnalyseArgumentLabel
+                               withNextIndex
+                         | otherwise ->
+                             Left $ UnexpectedToken t "Type or ')'"
 
               _ ->
                 contextualUnexpectedTokenHalt

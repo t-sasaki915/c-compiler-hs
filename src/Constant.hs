@@ -1,5 +1,6 @@
 module Constant
   ( keywords
+  , typeKeywords
   , symbols
   , letters
   , digits
@@ -10,6 +11,9 @@ module Constant
 
 keywords :: [String]
 keywords = [ "int" , "return", "void" ]
+
+typeKeywords :: [String]
+typeKeywords = [ "int", "void" ]
 
 symbols :: [Char]
 symbols = [ '(' , ')' , '{' , '}' , ';', '/', '*', ',' ]
