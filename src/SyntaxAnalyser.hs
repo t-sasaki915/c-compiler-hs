@@ -56,10 +56,14 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
   analyse :: State -> AnalyseResult
   analyse state
     | reachedToBottom =
-        Right $
-          Node Program
-            [ Node DeclarationList declarations
-            ]
+        case declarationStep' of
+          AnalyseType ->
+            Right $
+              Node Program
+                [ Node DeclarationList declarations
+                ]
+          _ ->
+            Left UnclosingDeclaration
     | otherwise =
         case t of
           (Whitespace _) ->
@@ -191,7 +195,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 contextualUnexpectedTokenHalt
 
           (Number _) ->
-            ignoreAndDoNothing
+            contextualUnexpectedTokenHalt
     where
     index' = _index state
     declarations = _declarationList state

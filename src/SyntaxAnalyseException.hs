@@ -6,6 +6,7 @@ import           Control.Exception
 
 data SyntaxAnalyseException = UnexpectedToken Token String
                             | IllegalArgumentDeclaration
+                            | UnclosingDeclaration
                             deriving Eq
 
 instance Exception SyntaxAnalyseException
@@ -16,4 +17,7 @@ instance Show SyntaxAnalyseException where
 
   show IllegalArgumentDeclaration =
     "Illegal argument declaration"
+
+  show UnclosingDeclaration =
+    "Unclosing declaration"
 
