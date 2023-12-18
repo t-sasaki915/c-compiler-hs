@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module SyntaxAnalyser (syntaxAnalyse) where
 
 import           Constant               (typeKeywords)
@@ -6,6 +8,7 @@ import           SyntaxTree
 import           Token
 import           Util                   (combineList)
 
+import           Control.Lens           hiding (index)
 import           Data.Maybe             (fromJust)
 
 type AnalyseResult = Either SyntaxAnalyseException SyntaxTree
@@ -21,70 +24,31 @@ data DeclarationAnalyseStep = AnalyseType
                             | AnalyseCloseBraces
 
 data State = State
-  { declarationList      :: [SyntaxTree]
-  , declarationType      :: Maybe Token
-  , declarationLabel     :: Maybe Token
-  , declarationArgTypes  :: [Token]
-  , declarationArgLabels :: [Token]
-  , declarationStep      :: DeclarationAnalyseStep
-  , index                :: Int
+  { _declarationList      :: [SyntaxTree]
+  , _declarationType      :: Maybe Token
+  , _declarationLabel     :: Maybe Token
+  , _declarationArgTypes  :: [Token]
+  , _declarationArgLabels :: [Token]
+  , _declarationStep      :: DeclarationAnalyseStep
+  , _index                :: Int
   }
 
-confirmDecAnd :: (State -> [SyntaxTree] -> State) -> State -> State
-confirmDecAnd f s =
-  f s (declarationList s ++ [newDeclaration])
-  where
-  newDeclaration =
-    Node Declaration
-      (
-        [ Node (TypeSpecifier $ fromJust (declarationType s)) []
-        , Node (DeclarationLabel $ fromJust (declarationLabel s)) []
-        ] ++ map makeArgTree (combineList (declarationArgTypes s) (declarationArgLabels s))
-      )
+makeLenses ''State
 
+declarationTree :: State -> SyntaxTree
+declarationTree s =
+  Node Declaration
+    (
+      [ Node (TypeSpecifier $ fromJust (_declarationType s)) []
+      , Node (DeclarationLabel $ fromJust (_declarationLabel s)) []
+      ] ++ map makeArgTree (combineList (_declarationArgTypes s) (_declarationArgLabels s))
+    )
+  where
   makeArgTree arg =
     Node DeclarationArgument
       [ Node (TypeSpecifier $ fst arg) []
       , Node (DeclarationLabel $ snd arg) []
       ]
-withPreviousDecs :: (State -> [SyntaxTree] -> State) -> State -> State
-withPreviousDecs f s = f s (declarationList s)
-
-setDecTypeAnd :: Token -> (State -> [SyntaxTree] -> Maybe Token -> State) -> State -> [SyntaxTree] -> State
-setDecTypeAnd t f s st = f s st (Just t)
-unsetDecTypeAnd :: (State -> [SyntaxTree] -> Maybe Token -> State) -> State -> [SyntaxTree] -> State
-unsetDecTypeAnd f s st = f s st Nothing
-withPreviousDecType :: (State -> [SyntaxTree] -> Maybe Token -> State) -> State -> [SyntaxTree] -> State
-withPreviousDecType f s st = f s st (declarationType s)
-
-setDecLabelAnd :: Token -> (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> State) -> State -> [SyntaxTree] -> Maybe Token -> State
-setDecLabelAnd t f s st dt = f s st dt (Just t)
-unsetDecLabelAnd :: (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> State) -> State -> [SyntaxTree] -> Maybe Token -> State
-unsetDecLabelAnd f s st dt = f s st dt Nothing
-withPreviousDecLabel :: (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> State) -> State -> [SyntaxTree] -> Maybe Token -> State
-withPreviousDecLabel f s st dt = f s st dt (declarationLabel s)
-
-addDecArgTypeAnd :: Token -> (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> State) -> State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> State
-addDecArgTypeAnd t f s st dt dl = f s st dt dl (declarationArgTypes s ++ [t])
-clearDecArgTypesAnd :: (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> State) -> State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> State
-clearDecArgTypesAnd f s st dt dl = f s st dt dl []
-withPreviousDecArgTypes :: (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> State) -> State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> State
-withPreviousDecArgTypes f s st dt dl = f s st dt dl (declarationArgTypes s)
-
-addDecArgLabelAnd :: Token -> (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> [Token] -> State) -> State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> State
-addDecArgLabelAnd t f s st dt dl at = f s st dt dl at (declarationArgLabels s ++ [t])
-clearDecArgLabelsAnd :: (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> [Token] -> State) -> State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> State
-clearDecArgLabelsAnd f s st dt dl at = f s st dt dl at []
-withPreviousDecArgLabels :: (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> [Token] -> State) -> State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> State
-withPreviousDecArgLabels f s st dt dl at = f s st dt dl at (declarationArgLabels s)
-
-withDecAnalyseStep :: DeclarationAnalyseStep -> (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> [Token] -> DeclarationAnalyseStep -> State) -> State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> [Token] -> State
-withDecAnalyseStep as f s st dt dl at al = f s st dt dl at al as
-withPreviousDecAnalyseStep :: (State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> [Token] -> DeclarationAnalyseStep -> State) -> State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> [Token] -> State
-withPreviousDecAnalyseStep f s st dt dl at al = f s st dt dl at al (declarationStep s)
-
-withNextIndex :: State -> [SyntaxTree] -> Maybe Token -> Maybe Token -> [Token] -> [Token] -> DeclarationAnalyseStep -> State
-withNextIndex s st dt dl at al as = State st dt dl at al as (index s + 1)
 
 syntaxAnalyse :: [Token] -> AnalyseResult
 syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
@@ -113,13 +77,9 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case () of
                   () | keyword `elem` typeKeywords ->
                          continueAnalysing $
-                           withPreviousDecs $
-                           setDecTypeAnd t $
-                           withPreviousDecLabel $
-                           withPreviousDecArgTypes $
-                           withPreviousDecArgLabels $
-                           withDecAnalyseStep AnalyseLabel
-                           withNextIndex
+                           set declarationType (Just t) .
+                           set declarationStep AnalyseLabel .
+                           over index (+1)
                      | otherwise ->
                          Left $ UnexpectedToken t "Type"
 
@@ -127,31 +87,21 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case keyword of
                   "void" ->
                     case () of
-                      () | null $ declarationArgTypes state ->
+                      () | null $ _declarationArgTypes state ->
                              continueAnalysing $
-                               withPreviousDecs $
-                               withPreviousDecType $
-                               withPreviousDecLabel $
-                               withPreviousDecArgTypes $
-                               withPreviousDecArgLabels $
-                               withDecAnalyseStep AnalyseCloseParentheses
-                               withNextIndex
+                               set declarationStep AnalyseCloseParentheses .
+                               over index (+1)
                          | otherwise ->
                              Left IllegalArgumentDeclaration
                   _ ->
                     case () of
                       () | keyword `elem` typeKeywords ->
                              continueAnalysing $
-                               withPreviousDecs $
-                               withPreviousDecType $
-                               withPreviousDecLabel $
-                               addDecArgTypeAnd t $
-                               withPreviousDecArgLabels $
-                               withDecAnalyseStep AnalyseArgumentLabel
-                               withNextIndex
+                               over declarationArgTypes (++[t]) .
+                               set declarationStep AnalyseArgumentLabel .
+                               over index (+1)
                          | otherwise ->
                              Left $ UnexpectedToken t "Type or ')'"
-
               _ ->
                 contextualUnexpectedTokenHalt
 
@@ -159,23 +109,15 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
             case declarationStep' of
               AnalyseLabel ->
                 continueAnalysing $
-                  withPreviousDecs $
-                  withPreviousDecType $
-                  setDecLabelAnd t $
-                  withPreviousDecArgTypes $
-                  withPreviousDecArgLabels $
-                  withDecAnalyseStep AnalyseOpenParentheses
-                  withNextIndex
+                  set declarationLabel (Just t) .
+                  set declarationStep AnalyseOpenParentheses .
+                  over index (+1)
 
               AnalyseArgumentLabel ->
                 continueAnalysing $
-                  withPreviousDecs $
-                  withPreviousDecType $
-                  withPreviousDecLabel $
-                  withPreviousDecArgTypes $
-                  addDecArgLabelAnd t $
-                  withDecAnalyseStep AnalyseArgumentSeparator
-                  withNextIndex
+                  over declarationArgLabels (++[t]) .
+                  set declarationStep AnalyseArgumentSeparator .
+                  over index (+1)
 
               _ ->
                 contextualUnexpectedTokenHalt
@@ -186,13 +128,8 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case symbol of
                   '(' ->
                     continueAnalysing $
-                      withPreviousDecs $
-                      withPreviousDecType $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseArgumentType
-                      withNextIndex
+                      set declarationStep AnalyseArgumentType .
+                      over index (+1)
                   _ ->
                     Left $ UnexpectedToken t "'('"
 
@@ -200,13 +137,8 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case symbol of
                   ')' ->
                     continueAnalysing $
-                      withPreviousDecs $
-                      withPreviousDecType $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseOpenBraces
-                      withNextIndex
+                      set declarationStep AnalyseOpenBraces .
+                      over index (+1)
                   _ ->
                     Left $ UnexpectedToken t "Type or ')'"
 
@@ -214,22 +146,12 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case symbol of
                   ',' ->
                     continueAnalysing $
-                      withPreviousDecs $
-                      withPreviousDecType $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseArgumentType
-                      withNextIndex
+                      set declarationStep AnalyseArgumentType .
+                      over index (+1)
                   ')' ->
                     continueAnalysing $
-                      withPreviousDecs $
-                      withPreviousDecType $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseOpenBraces
-                      withNextIndex
+                      set declarationStep AnalyseOpenBraces .
+                      over index (+1)
                   _ ->
                     Left $ UnexpectedToken t "',' or ')'"
 
@@ -237,13 +159,8 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case symbol of
                   ')' ->
                     continueAnalysing $
-                      withPreviousDecs $
-                      withPreviousDecType $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseOpenBraces
-                      withNextIndex
+                      set declarationStep AnalyseOpenBraces .
+                      over index (+1)
                   _ ->
                     Left $ UnexpectedToken t "')'"
 
@@ -251,13 +168,8 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case symbol of
                   '{' ->
                     continueAnalysing $
-                      withPreviousDecs $
-                      withPreviousDecType $
-                      withPreviousDecLabel $
-                      withPreviousDecArgTypes $
-                      withPreviousDecArgLabels $
-                      withDecAnalyseStep AnalyseCloseBraces
-                      withNextIndex
+                      set declarationStep AnalyseCloseBraces .
+                      over index (+1)
                   _ ->
                     Left $ UnexpectedToken t "'{'"
 
@@ -265,13 +177,13 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case symbol of
                   '}' ->
                     continueAnalysing $
-                      confirmDecAnd $
-                      unsetDecTypeAnd $
-                      unsetDecLabelAnd $
-                      clearDecArgTypesAnd $
-                      clearDecArgLabelsAnd $
-                      withDecAnalyseStep AnalyseType
-                      withNextIndex
+                      over declarationList (++[declarationTree state]) .
+                      set declarationType Nothing .
+                      set declarationLabel Nothing .
+                      set declarationArgTypes [] .
+                      set declarationArgLabels [] .
+                      set declarationStep AnalyseType .
+                      over index (+1)
                   _ ->
                     Left $ UnexpectedToken t "'}'"
 
@@ -281,9 +193,9 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
           _ -> -- Number
             ignoreAndDoNothing
     where
-    index' = index state
-    declarations = declarationList state
-    declarationStep' = declarationStep state
+    index' = _index state
+    declarations = _declarationList state
+    declarationStep' = _declarationStep state
 
     reachedToBottom = index' >= length tokens
     t = tokens !! index'
@@ -294,13 +206,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
     ignoreAndDoNothing :: AnalyseResult
     ignoreAndDoNothing =
       continueAnalysing $
-        withPreviousDecs $
-        withPreviousDecType $
-        withPreviousDecLabel $
-        withPreviousDecArgTypes $
-        withPreviousDecArgLabels $
-        withPreviousDecAnalyseStep
-        withNextIndex
+        over index (+1)
 
     contextualUnexpectedTokenHalt :: AnalyseResult
     contextualUnexpectedTokenHalt = Left $ UnexpectedToken t expectation

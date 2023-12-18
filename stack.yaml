@@ -43,6 +43,7 @@ packages:
 extra-deps:
   - extra-1.7.14
   - regex-posix-0.96.0.1
+  - lens-5.2.3
   - HUnit-1.6.2.0
 
 # Override default flag values for local packages and extra-deps

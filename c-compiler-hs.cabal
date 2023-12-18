@@ -41,6 +41,7 @@ library
   build-depends:
       base >=4.7 && <5
     , extra
+    , lens
     , regex-posix
   default-language: Haskell2010
 
@@ -55,6 +56,7 @@ executable c-compiler-hs-exe
       base >=4.7 && <5
     , c-compiler-hs
     , extra
+    , lens
     , regex-posix
   default-language: Haskell2010
 
@@ -74,5 +76,6 @@ test-suite c-compiler-hs-test
     , base >=4.7 && <5
     , c-compiler-hs
     , extra
+    , lens
     , regex-posix
   default-language: Haskell2010
