@@ -2,8 +2,8 @@ import           System.Exit         (exitFailure, exitSuccess)
 import           Test.HUnit
 
 import           LexicalAnalyserTest
-import           SourceCodeUtilTest
 import           SyntaxAnalyserTest
+import           UtilTest
 
 main :: IO ()
 main = do

@@ -27,7 +27,6 @@ library
       Constant
       LexicalAnalyseException
       LexicalAnalyser
-      SourceCodeUtil
       SyntaxAnalyseException
       SyntaxAnalyser
       SyntaxTree
@@ -65,8 +64,8 @@ test-suite c-compiler-hs-test
   main-is: Spec.hs
   other-modules:
       LexicalAnalyserTest
-      SourceCodeUtilTest
       SyntaxAnalyserTest
+      UtilTest
       Paths_c_compiler_hs
   hs-source-dirs:
       test

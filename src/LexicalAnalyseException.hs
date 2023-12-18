@@ -1,6 +1,6 @@
 module LexicalAnalyseException (LexicalAnalyseException (..)) where
 
-import           SourceCodeUtil
+import           Util              (calculateIndexOfLine, calculateLine)
 
 import           Control.Exception
 

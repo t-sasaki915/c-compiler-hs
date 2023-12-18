@@ -1,6 +1,15 @@
-module Util ((!?), isPrefixOf', matchesPerfectly, combineList) where
+module Util
+  ( (!?)
+  , isPrefixOf'
+  , matchesPerfectly
+  , combineList
+  , calculateLine
+  , calculateIndexOfLine
+) where
 
-import           Data.List        (isPrefixOf)
+import           Constant         (newLines)
+
+import           Data.List        (findIndices, isPrefixOf)
 import           Text.Regex.Posix ((=~))
 
 (!?) :: String -> Int -> Maybe Char
@@ -8,6 +17,13 @@ import           Text.Regex.Posix ((=~))
   | n < 0          = Nothing
   | n >= length xs = Nothing
   | otherwise      = Just $ xs !! n
+
+dropRight :: Int -> [a] -> [a]
+dropRight n xs = reverse $ drop n (reverse xs)
+
+unsnoc :: [a] -> Maybe ([a], a)
+unsnoc [] = Nothing
+unsnoc xs = Just (dropRight 1 xs, last xs)
 
 isPrefixOf' :: (Eq a) => a -> [a] -> Bool
 isPrefixOf' x = isPrefixOf [x]
@@ -22,3 +38,19 @@ combineList xs ys = combineList' 0 []
     | i >= length xs = combined
     | i >= length ys = combined
     | otherwise = combineList' (i + 1) (combined ++ [(xs !! i, ys !! i)])
+
+calculateLine :: Int -> String -> Int
+calculateLine n sourceCode =
+  (+) 1 $
+    length $
+    filter (`elem` newLines) $
+    dropRight (length sourceCode - n) sourceCode
+
+calculateIndexOfLine :: Int -> String -> Int
+calculateIndexOfLine n sourceCode =
+  case unsnoc $
+         findIndices (`elem` newLines) $
+         dropRight (length sourceCode - n) sourceCode of
+    Just (_, ln) -> n - ln
+    Nothing      -> 1 + n
+

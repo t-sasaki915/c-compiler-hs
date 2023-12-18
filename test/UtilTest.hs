@@ -1,4 +1,4 @@
-module SourceCodeUtilTest
+module UtilTest
   ( calculateLineTest1
   , calculateLineTest2
   , calculateLineTest3
@@ -7,7 +7,7 @@ module SourceCodeUtilTest
   , calculateIndexOfLineTest3
   ) where
 
-import           SourceCodeUtil
+import           Util
 
 import           Test.HUnit
 
