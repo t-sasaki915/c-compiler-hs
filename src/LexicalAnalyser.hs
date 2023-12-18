@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module LexicalAnalyser (lexicalAnalyse) where
 
 import           Constant
@@ -5,60 +7,21 @@ import           LexicalAnalyseException
 import           Token
 import           Util
 
+import           Control.Lens            hiding (index)
+
 type AnalyseResult = Either LexicalAnalyseException [Token]
 
 data State = State
-  { tokens                     :: [Token]
-  , wordAnalyseMemory          :: String
-  , commentAnalyseMemory       :: String
-  , analysingWord              :: Bool
-  , analysingComment           :: Bool
-  , analysingSingleLineComment :: Bool
-  , index                      :: Int
+  { _tokens                     :: [Token]
+  , _wordAnalyseMemory          :: String
+  , _commentAnalyseMemory       :: String
+  , _analysingWord              :: Bool
+  , _analysingComment           :: Bool
+  , _analysingSingleLineComment :: Bool
+  , _index                      :: Int
   }
 
-withNewTokens :: [Token] -> (State -> [Token] -> State) -> State -> State
-withNewTokens ts f s = f s (tokens s ++ ts)
-withNewToken :: Token -> (State -> [Token] -> State) -> State -> State
-withNewToken t = withNewTokens [t]
-withPreviousTokens :: (State -> [Token] -> State) -> State -> State
-withPreviousTokens = withNewTokens []
-
-withMoreWordAnalyseMemory :: Char -> (State -> [Token] -> String -> State) -> State -> [Token] -> State
-withMoreWordAnalyseMemory c f s ts = f s ts (wordAnalyseMemory s ++ [c])
-withPreviousWordAnalyseMemory :: (State -> [Token] -> String -> State) -> State -> [Token] -> State
-withPreviousWordAnalyseMemory f s ts = f s ts (wordAnalyseMemory s)
-withClearedWordAnalyseMemory :: (State -> [Token] -> String -> State) -> State -> [Token] -> State
-withClearedWordAnalyseMemory f s ts = f s ts ""
-
-withMoreCommentAnalyseMemory :: Char -> (State -> [Token] -> String -> String -> State) -> State -> [Token] -> String -> State
-withMoreCommentAnalyseMemory c f s ts wm = f s ts wm (commentAnalyseMemory s ++ [c])
-withClearedCommentAnalyseMemory :: (State -> [Token] -> String -> String -> State) -> State -> [Token] -> String -> State
-withClearedCommentAnalyseMemory f s ts wm = f s ts wm ""
-
-withWordAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> State) -> State -> [Token] -> String -> String -> State
-withWordAnalyseMode f s ts wm cm = f s ts wm cm True
-withoutWordAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> State) -> State -> [Token] -> String -> String -> State
-withoutWordAnalyseMode f s ts wm cm = f s ts wm cm False
-withPreviousWordAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> State) -> State -> [Token] -> String -> String -> State
-withPreviousWordAnalyseMode f s ts wm cm = f s ts wm cm (analysingWord s)
-
-withCommentAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> State
-withCommentAnalyseMode f s ts wm cm wa = f s ts wm cm wa True
-withoutCommentAnalyseMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> State
-withoutCommentAnalyseMode f s ts wm cm wa = f s ts wm cm wa False
-
-withSingleLineCommentMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> Bool -> State
-withSingleLineCommentMode f s ts wm cm wa ca = f s ts wm cm wa ca True
-withoutSingleLineCommentMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> Bool -> State
-withoutSingleLineCommentMode f s ts wm cm wa ca = f s ts wm cm wa ca False
-withPreviousSingleLineCommentMode :: (State -> [Token] -> String -> String -> Bool -> Bool -> Bool -> State) -> State -> [Token] -> String -> String -> Bool -> Bool -> State
-withPreviousSingleLineCommentMode f s ts wm cm wa ca = f s ts wm cm wa ca (analysingSingleLineComment s)
-
-withNewIndex :: Int -> State -> [Token] -> String -> String -> Bool -> Bool -> Bool -> State
-withNewIndex i s ts wm cm wa ca sm = State ts wm cm wa ca sm (index s + i)
-withNextIndex :: State -> [Token] -> String -> String -> Bool -> Bool -> Bool -> State
-withNextIndex = withNewIndex 1
+makeLenses ''State
 
 lexicalAnalyse :: String -> AnalyseResult
 lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
@@ -73,248 +36,166 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                           Left $ UnclosingComment (index' - 1) sourceCode
                       | wordAnalyse ->
                           finaliseWordAnalyseAnd $ \wordToken ->
-                            Right $ tokens state ++ [Comment commentMemory, wordToken]
+                            Right $ _tokens state ++ [Comment commentMemory, wordToken]
                       | otherwise ->
-                          Right $ tokens state ++ [Comment commentMemory]
+                          Right $ _tokens state ++ [Comment commentMemory]
              | wordAnalyse ->
                  finaliseWordAnalyseAnd $ \wordToken ->
-                   Right $ tokens state ++ [wordToken]
+                   Right $ _tokens state ++ [wordToken]
              | otherwise ->
-                 Right $ tokens state
+                 Right $ _tokens state
     | c `elem` whitespaces =
         case () of
           () | commentAnalyse ->
                  continueAnalysing $
-                   withPreviousTokens $
-                   withPreviousWordAnalyseMemory $
-                   withMoreCommentAnalyseMemory c $
-                   withPreviousWordAnalyseMode $
-                   withCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over commentAnalyseMemory (++[c]) .
+                   over index (+1)
              | wordAnalyse ->
                  finaliseWordAnalyseAnd $ \wordToken ->
                    continueAnalysing $
-                     withNewTokens [wordToken, Whitespace c] $
-                     withClearedWordAnalyseMemory $
-                     withClearedCommentAnalyseMemory $
-                     withoutWordAnalyseMode $
-                     withoutCommentAnalyseMode $
-                     withPreviousSingleLineCommentMode
-                     withNextIndex
+                     over tokens (++ [wordToken, Whitespace c]) .
+                     set wordAnalyseMemory "" .
+                     set analysingWord False .
+                     over index (+1)
              | otherwise ->
                  continueAnalysing $
-                   withNewToken (Whitespace c) $
-                   withClearedWordAnalyseMemory $
-                   withClearedCommentAnalyseMemory $
-                   withoutWordAnalyseMode $
-                   withoutCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over tokens (++[Whitespace c]) .
+                   over index (+1)
     | c `elem` newLines =
         case () of
           () | commentAnalyse ->
                  case () of
                    () | not singleLineComment ->
                           continueAnalysing $
-                            withPreviousTokens $
-                            withPreviousWordAnalyseMemory $
-                            withMoreCommentAnalyseMemory c $
-                            withPreviousWordAnalyseMode $
-                            withCommentAnalyseMode $
-                            withoutSingleLineCommentMode
-                            withNextIndex
+                            over commentAnalyseMemory (++[c]) .
+                            over index (+1)
                       | wordAnalyse ->
                           finaliseWordAnalyseAnd $ \wordToken ->
                             continueAnalysing $
-                              withNewTokens [Comment commentMemory, wordToken, NewLine c] $
-                              withClearedWordAnalyseMemory $
-                              withClearedCommentAnalyseMemory $
-                              withoutWordAnalyseMode $
-                              withoutCommentAnalyseMode $
-                              withPreviousSingleLineCommentMode
-                              withNextIndex
+                              over tokens (++ [Comment commentMemory, wordToken, NewLine c]) .
+                              set wordAnalyseMemory "" .
+                              set commentAnalyseMemory "" .
+                              set analysingWord False .
+                              set analysingComment False .
+                              over index (+1)
                       | otherwise ->
                           continueAnalysing $
-                            withNewTokens [Comment commentMemory, NewLine c] $
-                            withClearedWordAnalyseMemory $
-                            withClearedCommentAnalyseMemory $
-                            withoutWordAnalyseMode $
-                            withoutCommentAnalyseMode $
-                            withPreviousSingleLineCommentMode
-                            withNextIndex
+                            over tokens (++ [Comment commentMemory, NewLine c]) .
+                            set commentAnalyseMemory "" .
+                            set analysingComment False .
+                            over index (+1)
              | wordAnalyse ->
                  finaliseWordAnalyseAnd $ \wordToken ->
                    continueAnalysing $
-                     withNewTokens [wordToken, NewLine c] $
-                     withClearedWordAnalyseMemory $
-                     withClearedCommentAnalyseMemory $
-                     withoutWordAnalyseMode $
-                     withoutCommentAnalyseMode $
-                     withPreviousSingleLineCommentMode
-                     withNextIndex
+                     over tokens (++ [wordToken, NewLine c]) .
+                     set wordAnalyseMemory "" .
+                     set analysingWord False .
+                     over index (+1)
              | otherwise ->
                  continueAnalysing $
-                   withNewToken (NewLine c) $
-                   withClearedWordAnalyseMemory $
-                   withClearedCommentAnalyseMemory $
-                   withoutWordAnalyseMode $
-                   withoutCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over tokens (++ [NewLine c]) .
+                   over index (+1)
     | c `elem` symbols =
         case () of
           () | commentAnalyse ->
                  case () of
-                   () | not singleLineComment && c == '*' ->
-                          case sourceCode !? (index' + 1) of
-                            Just '/' ->
-                              continueAnalysing $
-                                withNewToken (Comment $ commentMemory ++ "*/") $
-                                withPreviousWordAnalyseMemory $
-                                withClearedCommentAnalyseMemory $
-                                withPreviousWordAnalyseMode $
-                                withoutCommentAnalyseMode $
-                                withSingleLineCommentMode $
-                                withNewIndex 2
-                            _ ->
-                              continueAnalysing $
-                                withPreviousTokens $
-                                withPreviousWordAnalyseMemory $
-                                withMoreCommentAnalyseMemory c $
-                                withPreviousWordAnalyseMode $
-                                withCommentAnalyseMode $
-                                withPreviousSingleLineCommentMode
-                                withNextIndex
+                   () | not singleLineComment ->
+                          case () of
+                            () | c == '*' ->
+                                   case sourceCode !? (index' + 1) of
+                                     Just '/' ->
+                                       continueAnalysing $
+                                         over tokens (++ [Comment $ commentMemory ++ "*/"]) .
+                                         set commentAnalyseMemory "" .
+                                         set analysingComment False .
+                                         over index (+2)
+                                     _ ->
+                                       continueAnalysing $
+                                         over commentAnalyseMemory (++[c]) .
+                                         over index (+1)
+                               | otherwise ->
+                                   continueAnalysing $
+                                     over commentAnalyseMemory (++[c]) .
+                                     over index (+1)
                       | otherwise ->
                           continueAnalysing $
-                            withPreviousTokens $
-                            withPreviousWordAnalyseMemory $
-                            withMoreCommentAnalyseMemory c $
-                            withPreviousWordAnalyseMode $
-                            withCommentAnalyseMode $
-                            withPreviousSingleLineCommentMode
-                            withNextIndex
+                            over commentAnalyseMemory (++[c]) .
+                            over index (+1)
              | c == '/' ->
                  case sourceCode !? (index' + 1) of
                    Just '/' ->
                      continueAnalysing $
-                       withPreviousTokens $
-                       withPreviousWordAnalyseMemory $
-                       withMoreCommentAnalyseMemory c $
-                       withPreviousWordAnalyseMode $
-                       withCommentAnalyseMode $
-                       withSingleLineCommentMode
-                       withNextIndex
+                       over commentAnalyseMemory (++ "//") .
+                       set analysingComment True .
+                       set analysingSingleLineComment True .
+                       over index (+2)
                    Just '*' ->
                      continueAnalysing $
-                       withPreviousTokens $
-                       withPreviousWordAnalyseMemory $
-                       withMoreCommentAnalyseMemory c $
-                       withPreviousWordAnalyseMode $
-                       withCommentAnalyseMode $
-                       withoutSingleLineCommentMode
-                       withNextIndex
+                       over commentAnalyseMemory (++ "/*") .
+                       set analysingComment True .
+                       set analysingSingleLineComment False .
+                       over index (+2)
                    _ ->
                      case () of
                        () | wordAnalyse ->
                               finaliseWordAnalyseAnd $ \wordToken ->
                                 continueAnalysing $
-                                  withNewTokens [wordToken, Symbol c] $
-                                  withClearedWordAnalyseMemory $
-                                  withClearedCommentAnalyseMemory $
-                                  withoutWordAnalyseMode $
-                                  withoutCommentAnalyseMode $
-                                  withPreviousSingleLineCommentMode
-                                  withNextIndex
+                                  over tokens (++ [wordToken, Symbol c]) .
+                                  set wordAnalyseMemory "" .
+                                  set analysingWord False .
+                                  over index (+1)
                           | otherwise ->
                               continueAnalysing $
-                                withNewToken (Symbol c) $
-                                withClearedWordAnalyseMemory $
-                                withClearedCommentAnalyseMemory $
-                                withoutWordAnalyseMode $
-                                withoutCommentAnalyseMode $
-                                withPreviousSingleLineCommentMode
-                                withNextIndex
+                                over tokens (++ [Symbol c]) .
+                                over index (+1)
              | wordAnalyse ->
                  finaliseWordAnalyseAnd $ \wordToken ->
                    continueAnalysing $
-                     withNewTokens [wordToken, Symbol c] $
-                     withClearedWordAnalyseMemory $
-                     withClearedCommentAnalyseMemory $
-                     withoutWordAnalyseMode $
-                     withoutCommentAnalyseMode $
-                     withPreviousSingleLineCommentMode
-                     withNextIndex
+                     over tokens (++ [wordToken, Symbol c]) .
+                     set wordAnalyseMemory "" .
+                     set analysingWord False .
+                     over index (+1)
              | otherwise ->
                  continueAnalysing $
-                   withNewToken (Symbol c) $
-                   withClearedWordAnalyseMemory $
-                   withClearedCommentAnalyseMemory $
-                   withoutWordAnalyseMode $
-                   withoutCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over tokens (++ [Symbol c]) .
+                   over index (+1)
     | c `elem` letters =
         case () of
           () | commentAnalyse ->
                  continueAnalysing $
-                   withPreviousTokens $
-                   withPreviousWordAnalyseMemory $
-                   withMoreCommentAnalyseMemory c $
-                   withPreviousWordAnalyseMode $
-                   withCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over commentAnalyseMemory (++[c]) .
+                   over index (+1)
              | otherwise ->
                  continueAnalysing $
-                   withPreviousTokens $
-                   withMoreWordAnalyseMemory c $
-                   withClearedCommentAnalyseMemory $
-                   withWordAnalyseMode $
-                   withoutCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over wordAnalyseMemory (++[c]) .
+                   set analysingWord True .
+                   over index (+1)
     | c `elem` digits =
         case () of
           () | commentAnalyse ->
                  continueAnalysing $
-                   withPreviousTokens $
-                   withPreviousWordAnalyseMemory $
-                   withMoreCommentAnalyseMemory c $
-                   withPreviousWordAnalyseMode $
-                   withCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over commentAnalyseMemory (++[c]) .
+                   over index (+1)
              | otherwise ->
                  continueAnalysing $
-                   withPreviousTokens $
-                   withMoreWordAnalyseMemory c $
-                   withClearedCommentAnalyseMemory $
-                   withWordAnalyseMode $
-                   withoutCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over wordAnalyseMemory (++[c]) .
+                   set analysingWord True .
+                   over index (+1)
     | otherwise =
         case () of
           () | commentAnalyse ->
                  continueAnalysing $
-                   withPreviousTokens $
-                   withPreviousWordAnalyseMemory $
-                   withMoreCommentAnalyseMemory c $
-                   withPreviousWordAnalyseMode $
-                   withCommentAnalyseMode $
-                   withPreviousSingleLineCommentMode
-                   withNextIndex
+                   over commentAnalyseMemory (++[c]) .
+                   over index (+1)
              | otherwise ->
                  Left $ UnexpectedCharacter index' sourceCode c
     where
-    index' = index state
-    wordAnalyse = analysingWord state
-    commentAnalyse = analysingComment state
-    singleLineComment = analysingSingleLineComment state
-    wordMemory = wordAnalyseMemory state
-    commentMemory = commentAnalyseMemory state
+    index' = _index state
+    wordAnalyse = _analysingWord state
+    commentAnalyse = _analysingComment state
+    singleLineComment = _analysingSingleLineComment state
+    wordMemory = _wordAnalyseMemory state
+    commentMemory = _commentAnalyseMemory state
 
     reachedToBottom = index' >= length sourceCode
     c = sourceCode !! index'
