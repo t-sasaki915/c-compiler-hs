@@ -79,7 +79,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                          continueAnalysing $
                            set declarationType (Just t) .
                            set declarationStep AnalyseLabel .
-                           over index (+1)
+                           over index (+ 1)
                      | otherwise ->
                          Left $ UnexpectedToken t "Type"
 
@@ -90,16 +90,16 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                       () | null $ _declarationArgTypes state ->
                              continueAnalysing $
                                set declarationStep AnalyseCloseParentheses .
-                               over index (+1)
+                               over index (+ 1)
                          | otherwise ->
                              Left IllegalArgumentDeclaration
                   _ ->
                     case () of
                       () | keyword `elem` typeKeywords ->
                              continueAnalysing $
-                               over declarationArgTypes (++[t]) .
+                               over declarationArgTypes (++ [t]) .
                                set declarationStep AnalyseArgumentLabel .
-                               over index (+1)
+                               over index (+ 1)
                          | otherwise ->
                              Left $ UnexpectedToken t "Type or ')'"
               _ ->
@@ -111,13 +111,13 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 continueAnalysing $
                   set declarationLabel (Just t) .
                   set declarationStep AnalyseOpenParentheses .
-                  over index (+1)
+                  over index (+ 1)
 
               AnalyseArgumentLabel ->
                 continueAnalysing $
-                  over declarationArgLabels (++[t]) .
+                  over declarationArgLabels (++ [t]) .
                   set declarationStep AnalyseArgumentSeparator .
-                  over index (+1)
+                  over index (+ 1)
 
               _ ->
                 contextualUnexpectedTokenHalt
@@ -129,7 +129,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                   '(' ->
                     continueAnalysing $
                       set declarationStep AnalyseArgumentType .
-                      over index (+1)
+                      over index (+ 1)
                   _ ->
                     Left $ UnexpectedToken t "'('"
 
@@ -138,7 +138,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                   ')' ->
                     continueAnalysing $
                       set declarationStep AnalyseOpenBraces .
-                      over index (+1)
+                      over index (+ 1)
                   _ ->
                     Left $ UnexpectedToken t "Type or ')'"
 
@@ -147,11 +147,11 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                   ',' ->
                     continueAnalysing $
                       set declarationStep AnalyseArgumentType .
-                      over index (+1)
+                      over index (+ 1)
                   ')' ->
                     continueAnalysing $
                       set declarationStep AnalyseOpenBraces .
-                      over index (+1)
+                      over index (+ 1)
                   _ ->
                     Left $ UnexpectedToken t "',' or ')'"
 
@@ -160,7 +160,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                   ')' ->
                     continueAnalysing $
                       set declarationStep AnalyseOpenBraces .
-                      over index (+1)
+                      over index (+ 1)
                   _ ->
                     Left $ UnexpectedToken t "')'"
 
@@ -169,7 +169,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                   '{' ->
                     continueAnalysing $
                       set declarationStep AnalyseCloseBraces .
-                      over index (+1)
+                      over index (+ 1)
                   _ ->
                     Left $ UnexpectedToken t "'{'"
 
@@ -177,20 +177,20 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType 0
                 case symbol of
                   '}' ->
                     continueAnalysing $
-                      over declarationList (++[declarationTree state]) .
+                      over declarationList (++ [declarationTree state]) .
                       set declarationType Nothing .
                       set declarationLabel Nothing .
                       set declarationArgTypes [] .
                       set declarationArgLabels [] .
                       set declarationStep AnalyseType .
-                      over index (+1)
+                      over index (+ 1)
                   _ ->
                     Left $ UnexpectedToken t "'}'"
 
               _ ->
                 contextualUnexpectedTokenHalt
 
-          _ -> -- Number
+          (Number _) ->
             ignoreAndDoNothing
     where
     index' = _index state

@@ -48,27 +48,27 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
         case () of
           () | commentAnalyse ->
                  continueAnalysing $
-                   over commentAnalyseMemory (++[c]) .
-                   over index (+1)
+                   over commentAnalyseMemory (++ [c]) .
+                   over index (+ 1)
              | wordAnalyse ->
                  finaliseWordAnalyseAnd $ \wordToken ->
                    continueAnalysing $
                      over tokens (++ [wordToken, Whitespace c]) .
                      set wordAnalyseMemory "" .
                      set analysingWord False .
-                     over index (+1)
+                     over index (+ 1)
              | otherwise ->
                  continueAnalysing $
-                   over tokens (++[Whitespace c]) .
-                   over index (+1)
+                   over tokens (++ [Whitespace c]) .
+                   over index (+ 1)
     | c `elem` newLines =
         case () of
           () | commentAnalyse ->
                  case () of
                    () | not singleLineComment ->
                           continueAnalysing $
-                            over commentAnalyseMemory (++[c]) .
-                            over index (+1)
+                            over commentAnalyseMemory (++ [c]) .
+                            over index (+ 1)
                       | wordAnalyse ->
                           finaliseWordAnalyseAnd $ \wordToken ->
                             continueAnalysing $
@@ -77,24 +77,24 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                               set commentAnalyseMemory "" .
                               set analysingWord False .
                               set analysingComment False .
-                              over index (+1)
+                              over index (+ 1)
                       | otherwise ->
                           continueAnalysing $
                             over tokens (++ [Comment commentMemory, NewLine c]) .
                             set commentAnalyseMemory "" .
                             set analysingComment False .
-                            over index (+1)
+                            over index (+ 1)
              | wordAnalyse ->
                  finaliseWordAnalyseAnd $ \wordToken ->
                    continueAnalysing $
                      over tokens (++ [wordToken, NewLine c]) .
                      set wordAnalyseMemory "" .
                      set analysingWord False .
-                     over index (+1)
+                     over index (+ 1)
              | otherwise ->
                  continueAnalysing $
                    over tokens (++ [NewLine c]) .
-                   over index (+1)
+                   over index (+ 1)
     | c `elem` symbols =
         case () of
           () | commentAnalyse ->
@@ -108,19 +108,19 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                                          over tokens (++ [Comment $ commentMemory ++ "*/"]) .
                                          set commentAnalyseMemory "" .
                                          set analysingComment False .
-                                         over index (+2)
+                                         over index (+ 2)
                                      _ ->
                                        continueAnalysing $
-                                         over commentAnalyseMemory (++[c]) .
-                                         over index (+1)
+                                         over commentAnalyseMemory (++ [c]) .
+                                         over index (+ 1)
                                | otherwise ->
                                    continueAnalysing $
-                                     over commentAnalyseMemory (++[c]) .
-                                     over index (+1)
+                                     over commentAnalyseMemory (++ [c]) .
+                                     over index (+ 1)
                       | otherwise ->
                           continueAnalysing $
-                            over commentAnalyseMemory (++[c]) .
-                            over index (+1)
+                            over commentAnalyseMemory (++ [c]) .
+                            over index (+ 1)
              | c == '/' ->
                  case sourceCode !? (index' + 1) of
                    Just '/' ->
@@ -128,13 +128,13 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                        over commentAnalyseMemory (++ "//") .
                        set analysingComment True .
                        set analysingSingleLineComment True .
-                       over index (+2)
+                       over index (+ 2)
                    Just '*' ->
                      continueAnalysing $
                        over commentAnalyseMemory (++ "/*") .
                        set analysingComment True .
                        set analysingSingleLineComment False .
-                       over index (+2)
+                       over index (+ 2)
                    _ ->
                      case () of
                        () | wordAnalyse ->
@@ -143,50 +143,50 @@ lexicalAnalyse sourceCode = analyse $ State [] "" "" False False True 0
                                   over tokens (++ [wordToken, Symbol c]) .
                                   set wordAnalyseMemory "" .
                                   set analysingWord False .
-                                  over index (+1)
+                                  over index (+ 1)
                           | otherwise ->
                               continueAnalysing $
                                 over tokens (++ [Symbol c]) .
-                                over index (+1)
+                                over index (+ 1)
              | wordAnalyse ->
                  finaliseWordAnalyseAnd $ \wordToken ->
                    continueAnalysing $
                      over tokens (++ [wordToken, Symbol c]) .
                      set wordAnalyseMemory "" .
                      set analysingWord False .
-                     over index (+1)
+                     over index (+ 1)
              | otherwise ->
                  continueAnalysing $
                    over tokens (++ [Symbol c]) .
-                   over index (+1)
+                   over index (+ 1)
     | c `elem` letters =
         case () of
           () | commentAnalyse ->
                  continueAnalysing $
-                   over commentAnalyseMemory (++[c]) .
-                   over index (+1)
+                   over commentAnalyseMemory (++ [c]) .
+                   over index (+ 1)
              | otherwise ->
                  continueAnalysing $
-                   over wordAnalyseMemory (++[c]) .
+                   over wordAnalyseMemory (++ [c]) .
                    set analysingWord True .
-                   over index (+1)
+                   over index (+ 1)
     | c `elem` digits =
         case () of
           () | commentAnalyse ->
                  continueAnalysing $
-                   over commentAnalyseMemory (++[c]) .
-                   over index (+1)
+                   over commentAnalyseMemory (++ [c]) .
+                   over index (+ 1)
              | otherwise ->
                  continueAnalysing $
-                   over wordAnalyseMemory (++[c]) .
+                   over wordAnalyseMemory (++ [c]) .
                    set analysingWord True .
-                   over index (+1)
+                   over index (+ 1)
     | otherwise =
         case () of
           () | commentAnalyse ->
                  continueAnalysing $
-                   over commentAnalyseMemory (++[c]) .
-                   over index (+1)
+                   over commentAnalyseMemory (++ [c]) .
+                   over index (+ 1)
              | otherwise ->
                  Left $ UnexpectedCharacter index' sourceCode c
     where
