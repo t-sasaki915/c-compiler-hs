@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: extra-1.7.14@sha256:e3d3ce1dc7746b1132930e48c59fb5e8c51a09e92e0c031316be031067a273fb,2707
-    pantry-tree:
-      sha256: 22bd4bbf11717a50e009bbbcb685038d1a45799c71abaf993edd93edcd0b2bc2
-      size: 1960
-  original:
-    hackage: extra-1.7.14
-- completed:
     hackage: regex-posix-0.96.0.1@sha256:816d6acc560cb86672f347a7bef8129578dde26ed760f9e79b4976ed9bd7b9fd,2925
     pantry-tree:
       sha256: ea6a3adfad8fb41a761b71afb057454a41eb76fc3f75c926d0bda90588b20529
