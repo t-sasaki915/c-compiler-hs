@@ -87,12 +87,17 @@ syntaxAnalyseTest2 = TestCase (
           [ Node Declaration
               [ Node (TypeSpecifier (Keyword "int")) []
               , Node (DeclarationLabel (Identifier "main")) []
-              , Node (Operation (Keyword "return") [Number "0"]) []
+              , Node Operation
+                  [ Node (OperationVerb (Keyword "return")) []
+                  , Node (OperationArgument (Number "0")) []
+                  ]
               ]
           , Node Declaration
               [ Node (TypeSpecifier (Keyword "void")) []
               , Node (DeclarationLabel (Identifier "nothing")) []
-              , Node (Operation (Keyword "return") []) []
+              , Node Operation
+                  [ Node (OperationVerb (Keyword "return")) []
+                  ]
               ]
           , Node Declaration
               [ Node (TypeSpecifier (Keyword "int")) []
@@ -101,7 +106,10 @@ syntaxAnalyseTest2 = TestCase (
                   [ Node (TypeSpecifier (Keyword "int")) []
                   , Node (DeclarationLabel (Identifier "x")) []
                   ]
-              , Node (Operation (Keyword "return") [Identifier "x"]) []
+              , Node Operation
+                  [ Node (OperationVerb (Keyword "return")) []
+                  , Node (OperationArgument (Identifier "x")) []
+                  ]
               ]
           ]
       ]

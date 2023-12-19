@@ -59,7 +59,11 @@ declarationTree s =
       , Node (DeclarationLabel $ snd arg) []
       ]
   makeOperationTree operation =
-    Node (uncurry Operation operation) []
+    Node Operation
+      (
+        Node (OperationVerb $ fst operation) [] :
+        map (\a -> Node (OperationArgument a) []) (snd operation)
+      )
 
 syntaxAnalyse :: [Token] -> AnalyseResult
 syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType AnalyseVerb [] [] [] 0
