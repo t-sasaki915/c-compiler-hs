@@ -10,6 +10,7 @@ data Syntax = Program
             | DeclarationLabel Token
             | TypeSpecifier Token
             | DeclarationArgument
+            | Operation Token [Token]
             deriving (Eq, Show)
 
 data SyntaxTree = Node
