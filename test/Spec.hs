@@ -23,6 +23,7 @@ main = do
       , TestLabel "lexicalAnalyseTest 6"       lexicalAnalyseTest6
       , TestLabel "lexicalAnalyseTest 7"       lexicalAnalyseTest7
       , TestLabel "syntaxAnalyseTest 1"        syntaxAnalyseTest1
+      , TestLabel "syntaxAnalyseTest 2"        syntaxAnalyseTest2
       ]
   result <- runTestTT tests
   if failures result /= 0 || errors result /= 0 then

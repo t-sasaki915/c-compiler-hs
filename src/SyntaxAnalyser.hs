@@ -49,7 +49,7 @@ declarationTree s =
     (
       [ Node (TypeSpecifier $ fromJust (_declarationType s)) []
       , Node (DeclarationLabel $ fromJust (_declarationLabel s)) []
-      ] ++ (map makeArgTree (combineList (_declarationArgTypes s) (_declarationArgLabels s)))
+      ] ++ map makeArgTree (combineList (_declarationArgTypes s) (_declarationArgLabels s))
         ++ map makeOperationTree (combineList (_functionVerbs s) (_functionVerbArgs s))
     )
   where
@@ -59,7 +59,7 @@ declarationTree s =
       , Node (DeclarationLabel $ snd arg) []
       ]
   makeOperationTree operation =
-    Node (Operation (fst operation) (snd operation)) []
+    Node (uncurry Operation operation) []
 
 syntaxAnalyse :: [Token] -> AnalyseResult
 syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType AnalyseVerb [] [] [] 0
