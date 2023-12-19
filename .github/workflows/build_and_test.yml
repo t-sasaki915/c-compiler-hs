@@ -42,7 +42,7 @@ jobs:
         cabal build --only-dependencies --enable-tests --enable-benchmarks
     - name: Build
       run: cabal build --enable-tests --enable-benchmarks all
-    - name: Run tests
+    - name: Test
       run: cabal test all
 
     - name: HLint app
