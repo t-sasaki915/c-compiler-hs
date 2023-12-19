@@ -20,7 +20,7 @@ jobs:
       with:
         ghc-version: '8.10.3'
         cabal-version: '3.2'
-      uses: rwe/actions-hlint-setup@v1
+    - uses: rwe/actions-hlint-setup@v1
       with:
         version: '3.6.1'
 
