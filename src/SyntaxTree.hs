@@ -1,22 +1,19 @@
-module SyntaxTree (Syntax (..), SyntaxTree (..)) where
+module SyntaxTree (TreeToken (..), SyntaxTree (..)) where
 
 import           Token
 
 import           Data.List (intercalate)
 
-data Syntax = Program
-            | DeclarationList
-            | Declaration
-            | DeclarationLabel Token
-            | TypeSpecifier Token
-            | DeclarationArgument
-            | Operation
-            | OperationVerb Token
-            | OperationArgument Token
-            deriving (Eq, Show)
+data TreeToken = Program
+               | DefinitionList
+               | FunDefinition Token Token
+               | VarDefinition Token Token
+               | Expression [Token]
+               | Return
+               deriving (Eq, Show)
 
 data SyntaxTree = Node
-  { rootLabel :: Syntax
+  { rootLabel :: TreeToken
   , subForest :: [SyntaxTree]
   }
   deriving Eq

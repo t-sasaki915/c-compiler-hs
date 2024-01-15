@@ -3,6 +3,7 @@ module Util
   , isPrefixOf'
   , matchesPerfectly
   , combineList
+  , maybeLast
   , calculateLine
   , calculateIndexOfLine
 ) where
@@ -38,6 +39,11 @@ combineList xs ys = combineList' 0 []
     | i >= length xs = combined
     | i >= length ys = combined
     | otherwise = combineList' (i + 1) (combined ++ [(xs !! i, ys !! i)])
+
+maybeLast :: [a] -> Maybe a
+maybeLast xs
+  | null xs   = Nothing
+  | otherwise = Just $ last xs
 
 calculateLine :: Int -> String -> Int
 calculateLine n sourceCode =

@@ -27,39 +27,17 @@ syntaxAnalyseTest1 = TestCase (
     ]
   expected = Right $
     Node Program
-      [ Node DeclarationList
-          [ Node Declaration
-              [ Node (TypeSpecifier (Keyword "int")) []
-              , Node (DeclarationLabel (Identifier "main")) []
+      [ Node DefinitionList
+          [ Node (FunDefinition (Keyword "int") (Identifier "main")) []
+          , Node (FunDefinition (Keyword "void") (Identifier "aaa")) []
+          , Node (FunDefinition (Keyword "void") (Identifier "bbb"))
+              [ Node (VarDefinition (Keyword "int") (Identifier "a")) []
               ]
-          , Node Declaration
-              [ Node (TypeSpecifier (Keyword "void")) []
-              , Node (DeclarationLabel (Identifier "aaa")) []
+          , Node (FunDefinition (Keyword "int") (Identifier "ccc"))
+              [ Node (VarDefinition (Keyword "int") (Identifier "a")) []
+              , Node (VarDefinition (Keyword "int") (Identifier "b")) []
               ]
-          , Node Declaration
-              [ Node (TypeSpecifier (Keyword "void")) []
-              , Node (DeclarationLabel (Identifier "bbb")) []
-              , Node DeclarationArgument
-                  [ Node (TypeSpecifier (Keyword "int")) []
-                  , Node (DeclarationLabel (Identifier "a")) []
-                  ]
-              ]
-          , Node Declaration
-              [ Node (TypeSpecifier (Keyword "int")) []
-              , Node (DeclarationLabel (Identifier "ccc")) []
-              , Node DeclarationArgument
-                  [ Node (TypeSpecifier (Keyword "int")) []
-                  , Node (DeclarationLabel (Identifier "a")) []
-                  ]
-              , Node DeclarationArgument
-                  [ Node (TypeSpecifier (Keyword "int")) []
-                  , Node (DeclarationLabel (Identifier "b")) []
-                  ]
-              ]
-          , Node Declaration
-              [ Node (TypeSpecifier (Keyword "int")) []
-              , Node (DeclarationLabel (Identifier "ddd")) []
-              ]
+          , Node (FunDefinition (Keyword "int") (Identifier "ddd")) []
           ]
       ]
 

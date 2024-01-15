@@ -3,6 +3,7 @@
 module SyntaxAnalyser (syntaxAnalyse) where
 
 import           Constant               (typeKeywords)
+import           ExpressionAnalyser
 import           SyntaxAnalyseException
 import           SyntaxTree
 import           Token
@@ -13,72 +14,57 @@ import           Data.Maybe             (fromJust)
 
 type AnalyseResult = Either SyntaxAnalyseException SyntaxTree
 
-data DeclarationAnalyseStep = AnalyseType
-                            | AnalyseLabel
-                            | AnalyseOpenParentheses
-                            | AnalyseArgumentType
-                            | AnalyseArgumentLabel
-                            | AnalyseArgumentSeparator
-                            | AnalyseCloseParentheses
-                            | AnalyseOpenBraces
-                            | AnalyseOperation
-
-data OperationAnalyseStep = AnalyseOperationVerb
-                          | AnalyseOperationArgument
-                          | AnalyseSemicolon
+data DefinitionAnalyseStep = AnalyseDefType
+                           | AnalyseDefLabel
+                           | AnalyseEqualOrOpenParentheses
+                           | AnalyseVarDefSemicolon
+                           | AnalyseFunDefArgType
+                           | AnalyseFunDefArgLabel
+                           | AnalyseFunDefArgSeparatorOrCloseParentheses
+                           | AnalyseFunDefCloseParentheses
+                           | AnalyseFunDefOpenBraces
+                           | AnalyseFunDefValue
 
 data State = State
-  { _declarationList      :: [SyntaxTree]
-  , _declarationType      :: Maybe Token
-  , _declarationLabel     :: Maybe Token
-  , _declarationArgTypes  :: [Token]
-  , _declarationArgLabels :: [Token]
-  , _declarationStep      :: DeclarationAnalyseStep
-  , _operationStep        :: OperationAnalyseStep
-  , _operationVerbs       :: [Token]
-  , _operationArgs        :: [[Token]]
-  , _operationArgMemory   :: [Token]
-  , _index                :: Int
+  { _definitionList    :: [SyntaxTree]
+  , _defType           :: Maybe Token
+  , _defLabel          :: Maybe Token
+  , _varDefValueTokens :: [Token]
+  , _funDefArgTypes    :: [Token]
+  , _funDefArgLabels   :: [Token]
+  , _defAnalyseStep    :: DefinitionAnalyseStep
+  , _index             :: Int
   }
 
 makeLenses ''State
 
-declarationTree :: State -> SyntaxTree
-declarationTree s =
-  Node Declaration
-    (
-      [ Node (TypeSpecifier $ fromJust (_declarationType s)) []
-      , Node (DeclarationLabel $ fromJust (_declarationLabel s)) []
-      ] ++ map makeArgTree (combineList (_declarationArgTypes s) (_declarationArgLabels s))
-        ++ map makeOperationTree (combineList (_operationVerbs s) (_operationArgs s))
-    )
+mkVarDefTree :: State -> SyntaxTree
+mkVarDefTree s =
+  Node (VarDefinition (fromJust $ _defType s) (fromJust $ _defLabel s))
+    [ Node (Expression $ _varDefValueTokens s) []
+    ]
+
+mkFunDefTree :: State -> SyntaxTree
+mkFunDefTree s =
+  Node (FunDefinition (fromJust $ _defType s) (fromJust $ _defLabel s)) argDefTrees
   where
-  makeArgTree arg =
-    Node DeclarationArgument
-      [ Node (TypeSpecifier $ fst arg) []
-      , Node (DeclarationLabel $ snd arg) []
-      ]
-  makeOperationTree operation =
-    Node Operation
-      (
-        Node (OperationVerb $ fst operation) [] :
-        map (\a -> Node (OperationArgument a) []) (snd operation)
-      )
+  argDefTrees = map (\arg -> Node (uncurry VarDefinition arg) [])
+                      (combineList (_funDefArgTypes s) (_funDefArgLabels s))
 
 syntaxAnalyse :: [Token] -> AnalyseResult
-syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType AnalyseOperationVerb [] [] [] 0
+syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefType 0
   where
   analyse :: State -> AnalyseResult
   analyse state
     | reachedToBottom =
-        case declarationStep' of
-          AnalyseType ->
+        case defAnalyseStep' of
+          AnalyseDefType ->
             Right $
               Node Program
-                [ Node DeclarationList declarations
+                [ Node DefinitionList definitions
                 ]
           _ ->
-            Left UnclosingDeclaration
+            Left UnclosingDefinition
     | otherwise =
         case t of
           (Whitespace _) ->
@@ -91,199 +77,140 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType Anal
             ignoreAndDoNothing
 
           (Keyword keyword) ->
-            case declarationStep' of
-              AnalyseType ->
+            case defAnalyseStep' of
+              AnalyseDefType ->
                 case () of
                   () | keyword `elem` typeKeywords ->
                          continueAnalysing $
-                           set declarationType (Just t) .
-                           set declarationStep AnalyseLabel .
+                           set defType (Just t) .
+                           set defAnalyseStep AnalyseDefLabel .
                            over index (+ 1)
                      | otherwise ->
-                         Left $ UnexpectedToken t "Type"
+                         contextualUnexpectedTokenHalt
 
-              AnalyseArgumentType ->
+              AnalyseFunDefArgType ->
                 case keyword of
                   "void" ->
                     case () of
-                      () | null $ _declarationArgTypes state ->
+                      () | null $ _funDefArgTypes state ->
                              continueAnalysing $
-                               set declarationStep AnalyseCloseParentheses .
+                               set defAnalyseStep AnalyseFunDefCloseParentheses .
                                over index (+ 1)
                          | otherwise ->
-                             Left IllegalArgumentDeclaration
+                             Left IllegalArgumentDefinition
                   _ ->
                     case () of
                       () | keyword `elem` typeKeywords ->
                              continueAnalysing $
-                               over declarationArgTypes (++ [t]) .
-                               set declarationStep AnalyseArgumentLabel .
+                               over funDefArgTypes (++ [t]) .
+                               set defAnalyseStep AnalyseFunDefArgLabel .
                                over index (+ 1)
                          | otherwise ->
-                             Left $ UnexpectedToken t "Type or ')'"
-
-              AnalyseOperation ->
-                case operationStep' of
-                  AnalyseOperationVerb ->
-                    case keyword of
-                      "return" ->
-                        continueAnalysing $
-                          over operationVerbs (++ [t]) .
-                          set operationStep AnalyseOperationArgument .
-                          over index (+ 1)
-                      _ ->
-                        contextualUnexpectedTokenHalt
-
-                  _ ->
-                    contextualUnexpectedTokenHalt
+                             contextualUnexpectedTokenHalt
 
               _ ->
                 contextualUnexpectedTokenHalt
 
           (Identifier _) ->
-            case declarationStep' of
-              AnalyseLabel ->
+            case defAnalyseStep' of
+              AnalyseDefLabel ->
                 continueAnalysing $
-                  set declarationLabel (Just t) .
-                  set declarationStep AnalyseOpenParentheses .
+                  set defLabel (Just t) .
+                  set defAnalyseStep AnalyseEqualOrOpenParentheses .
                   over index (+ 1)
 
-              AnalyseArgumentLabel ->
+              AnalyseFunDefArgLabel ->
                 continueAnalysing $
-                  over declarationArgLabels (++ [t]) .
-                  set declarationStep AnalyseArgumentSeparator .
+                  over funDefArgLabels (++ [t]) .
+                  set defAnalyseStep AnalyseFunDefArgSeparatorOrCloseParentheses .
                   over index (+ 1)
-
-              AnalyseOperation ->
-                case operationStep' of
-                  AnalyseOperationArgument ->
-                    continueAnalysing $
-                      over operationArgMemory (++ [t]) .
-                      set operationStep AnalyseSemicolon .
-                      over index (+ 1)
-
-                  _ ->
-                    contextualUnexpectedTokenHalt
 
               _ ->
                 contextualUnexpectedTokenHalt
 
           (Symbol symbol) ->
-            case declarationStep' of
-              AnalyseOpenParentheses ->
+            case defAnalyseStep' of
+              AnalyseEqualOrOpenParentheses ->
                 case symbol of
+                  '=' ->
+                    case expressionAnalyse tokens index' of
+                      Just (expr, newIndex) ->
+                        continueAnalysing $
+                          set varDefValueTokens expr .
+                          set defAnalyseStep AnalyseVarDefSemicolon .
+                          set index newIndex
+                      Nothing ->
+                        Left UnrecognisableExpression
                   '(' ->
                     continueAnalysing $
-                      set declarationStep AnalyseArgumentType .
+                      set defAnalyseStep AnalyseFunDefArgType .
                       over index (+ 1)
                   _ ->
-                    Left $ UnexpectedToken t "'('"
+                    contextualUnexpectedTokenHalt
 
-              AnalyseArgumentType ->
+              AnalyseVarDefSemicolon ->
+                case symbol of
+                  ';' ->
+                    continueAnalysing $
+                      over definitionList (++ [mkVarDefTree state]) .
+                      set defType Nothing .
+                      set defLabel Nothing .
+                      set varDefValueTokens [] .
+                      set defAnalyseStep AnalyseDefType .
+                      over index (+ 1)
+                  _ ->
+                    contextualUnexpectedTokenHalt
+
+              AnalyseFunDefArgType ->
                 case symbol of
                   ')' ->
                     continueAnalysing $
-                      set declarationStep AnalyseOpenBraces .
+                      set defAnalyseStep AnalyseFunDefOpenBraces .
                       over index (+ 1)
                   _ ->
-                    Left $ UnexpectedToken t "Type or ')'"
+                    contextualUnexpectedTokenHalt
 
-              AnalyseArgumentSeparator ->
+              AnalyseFunDefArgSeparatorOrCloseParentheses ->
                 case symbol of
                   ',' ->
                     continueAnalysing $
-                      set declarationStep AnalyseArgumentType .
+                      set defAnalyseStep AnalyseFunDefArgType .
                       over index (+ 1)
                   ')' ->
                     continueAnalysing $
-                      set declarationStep AnalyseOpenBraces .
+                      set defAnalyseStep AnalyseFunDefOpenBraces .
                       over index (+ 1)
                   _ ->
-                    Left $ UnexpectedToken t "',' or ')'"
+                    contextualUnexpectedTokenHalt
 
-              AnalyseCloseParentheses ->
+              AnalyseFunDefCloseParentheses ->
                 case symbol of
                   ')' ->
                     continueAnalysing $
-                      set declarationStep AnalyseOpenBraces .
+                      set defAnalyseStep AnalyseFunDefOpenBraces .
                       over index (+ 1)
                   _ ->
-                    Left $ UnexpectedToken t "')'"
+                    contextualUnexpectedTokenHalt
 
-              AnalyseOpenBraces ->
+              AnalyseFunDefOpenBraces ->
                 case symbol of
                   '{' ->
                     continueAnalysing $
-                      set declarationStep AnalyseOperation .
+                      set defAnalyseStep AnalyseDefType .
                       over index (+ 1)
-                  _ ->
-                    Left $ UnexpectedToken t "'{'"
-
-              AnalyseOperation ->
-                case operationStep' of
-                  AnalyseOperationVerb ->
-                    case symbol of
-                      '}' ->
-                        continueAnalysing $
-                          over declarationList (++ [declarationTree state]) .
-                          set declarationType Nothing .
-                          set declarationLabel Nothing .
-                          set declarationArgTypes [] .
-                          set declarationArgLabels [] .
-                          set declarationStep AnalyseType .
-                          set operationStep AnalyseOperationVerb .
-                          set operationVerbs [] .
-                          set operationArgs [] .
-                          set operationArgMemory [] .
-                          over index (+ 1)
-                      _ ->
-                        contextualUnexpectedTokenHalt
-
-                  AnalyseOperationArgument ->
-                    case symbol of
-                      ';' ->
-                        continueAnalysing $
-                          over operationArgs (++ [_operationArgMemory state]) .
-                          set operationArgMemory [] .
-                          set operationStep AnalyseOperationVerb .
-                          over index (+ 1)
-                      _ ->
-                        contextualUnexpectedTokenHalt
-
-                  AnalyseSemicolon ->
-                    case symbol of
-                      ';' ->
-                        continueAnalysing $
-                          over operationArgs (++ [_operationArgMemory state]) .
-                          set operationArgMemory [] .
-                          set operationStep AnalyseOperationVerb .
-                          over index (+ 1)
-                      _ ->
-                        contextualUnexpectedTokenHalt
-
-              _ ->
-                contextualUnexpectedTokenHalt
-
-          (Number _) ->
-            case declarationStep' of
-              AnalyseOperation ->
-                case operationStep' of
-                  AnalyseOperationArgument ->
-                    continueAnalysing $
-                      over operationArgMemory (++ [t]) .
-                      set operationStep AnalyseSemicolon .
-                      over index (+ 1)
-
                   _ ->
                     contextualUnexpectedTokenHalt
 
               _ ->
                 contextualUnexpectedTokenHalt
+
+          (Number _) ->
+            contextualUnexpectedTokenHalt
+
     where
     index' = _index state
-    declarations = _declarationList state
-    declarationStep' = _declarationStep state
-    operationStep' = _operationStep state
+    definitions = _definitionList state
+    defAnalyseStep' = _defAnalyseStep state
 
     reachedToBottom = index' >= length tokens
     t = tokens !! index'
@@ -294,24 +221,20 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] AnalyseType Anal
     ignoreAndDoNothing :: AnalyseResult
     ignoreAndDoNothing =
       continueAnalysing $
-        over index (+1)
+        over index (+ 1)
 
     contextualUnexpectedTokenHalt :: AnalyseResult
     contextualUnexpectedTokenHalt = Left $ UnexpectedToken t expectation
       where
         expectation =
-          case declarationStep' of
-            AnalyseType              -> "Type"
-            AnalyseLabel             -> "Identifier"
-            AnalyseOpenParentheses   -> "'('"
-            AnalyseArgumentType      -> "Type or ')'"
-            AnalyseArgumentLabel     -> "Identifier"
-            AnalyseArgumentSeparator -> "',' or ')'"
-            AnalyseCloseParentheses  -> "')'"
-            AnalyseOpenBraces        -> "'{'"
-            AnalyseOperation         ->
-              case operationStep' of
-                AnalyseOperationVerb     -> "Verb or '}'"
-                AnalyseOperationArgument -> "Arguments"
-                AnalyseSemicolon         -> "';'"
-
+          case defAnalyseStep' of
+            AnalyseDefType                              -> "Type"
+            AnalyseDefLabel                             -> "Identifier"
+            AnalyseEqualOrOpenParentheses               -> "'=' or '('"
+            AnalyseVarDefSemicolon                      -> "';'"
+            AnalyseFunDefArgType                        -> "Type or ')'"
+            AnalyseFunDefArgLabel                       -> "Identifier"
+            AnalyseFunDefArgSeparatorOrCloseParentheses -> "',' or ')'"
+            AnalyseFunDefCloseParentheses               -> "')'"
+            AnalyseFunDefOpenBraces                     -> "'{'"
+            AnalyseFunDefValue                          -> "Value or '}'"

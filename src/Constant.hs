@@ -7,6 +7,7 @@ module Constant
   , whitespaces
   , newLines
   , numberFormat
+  , calculationSymbols
   ) where
 
 keywords :: [String]
@@ -16,7 +17,10 @@ typeKeywords :: [String]
 typeKeywords = [ "int", "void" ]
 
 symbols :: [Char]
-symbols = [ '(' , ')' , '{' , '}' , ';', '/', '*', ',' ]
+symbols = [ '(' , ')' , '{' , '}' , ';', '/', '*', ',', '+', '-', '=' ]
+
+calculationSymbols :: [Char]
+calculationSymbols = [ '+', '-', '*', '/' ]
 
 letters :: [Char]
 letters = [ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'
