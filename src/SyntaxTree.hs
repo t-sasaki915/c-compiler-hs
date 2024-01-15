@@ -9,7 +9,7 @@ data TreeToken = Program
                | FunDefinition Token Token
                | VarDefinition Token Token
                | Expression [Token]
-               | Return
+               | Operation Token
                deriving (Eq, Show)
 
 data SyntaxTree = Node

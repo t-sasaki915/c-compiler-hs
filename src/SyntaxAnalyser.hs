@@ -9,7 +9,7 @@ import           SyntaxTree
 import           Token
 import           Util                   (combineList)
 
-import           Control.Lens           hiding (index)
+import           Control.Lens           hiding (index, op)
 import           Data.Maybe             (fromJust)
 
 type AnalyseResult = Either SyntaxAnalyseException SyntaxTree
@@ -25,15 +25,21 @@ data DefinitionAnalyseStep = AnalyseDefType
                            | AnalyseFunDefOpenBraces
                            | AnalyseFunDefValue
 
+data OperationAnalyseStep = AnalyseOpType
+                          | AnalyseReturnSemicolon
+
 data State = State
-  { _definitionList    :: [SyntaxTree]
-  , _defType           :: Maybe Token
-  , _defLabel          :: Maybe Token
-  , _varDefValueTokens :: [Token]
-  , _funDefArgTypes    :: [Token]
-  , _funDefArgLabels   :: [Token]
-  , _defAnalyseStep    :: DefinitionAnalyseStep
-  , _index             :: Int
+  { _definitionList      :: [SyntaxTree]
+  , _defType             :: Maybe Token
+  , _defLabel            :: Maybe Token
+  , _varDefValueTokens   :: [Token]
+  , _funDefArgTypes      :: [Token]
+  , _funDefArgLabels     :: [Token]
+  , _defAnalyseStep      :: DefinitionAnalyseStep
+  , _funDefOperations    :: [Token]
+  , _funDefOperationArgs :: [[SyntaxTree]]
+  , _opAnalyseStep       :: OperationAnalyseStep
+  , _index               :: Int
   }
 
 makeLenses ''State
@@ -46,13 +52,15 @@ mkVarDefTree s =
 
 mkFunDefTree :: State -> SyntaxTree
 mkFunDefTree s =
-  Node (FunDefinition (fromJust $ _defType s) (fromJust $ _defLabel s)) argDefTrees
+  Node (FunDefinition (fromJust $ _defType s) (fromJust $ _defLabel s)) (argDefTrees ++ opTrees)
   where
   argDefTrees = map (\arg -> Node (uncurry VarDefinition arg) [])
                       (combineList (_funDefArgTypes s) (_funDefArgLabels s))
+  opTrees = map (\op -> Node (Operation $ fst op) (snd op))
+                  (combineList (_funDefOperations s) (_funDefOperationArgs s))
 
 syntaxAnalyse :: [Token] -> AnalyseResult
-syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefType 0
+syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefType [] [] AnalyseOpType 0
   where
   analyse :: State -> AnalyseResult
   analyse state
@@ -133,7 +141,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
               AnalyseEqualOrOpenParentheses ->
                 case symbol of
                   '=' ->
-                    case expressionAnalyse tokens index' of
+                    case expressionAnalyse tokens (index' + 1) of
                       Just (expr, newIndex) ->
                         continueAnalysing $
                           set varDefValueTokens expr .
@@ -201,6 +209,25 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                   _ ->
                     contextualUnexpectedTokenHalt
 
+              AnalyseFunDefValue ->
+                case opAnalyseStep' of
+                  AnalyseOpType ->
+                    case symbol of
+                      '}' ->
+                        continueAnalysing $
+                          over definitionList (++ [mkFunDefTree state]) .
+                          set defType Nothing .
+                          set defLabel Nothing .
+                          set funDefArgTypes [] .
+                          set funDefArgLabels [] .
+                          set defAnalyseStep AnalyseDefType .
+                          set funDefOperations [] .
+                          set funDefOperationArgs [] .
+                          set opAnalyseStep AnalyseOpType .
+                          over index (+ 1)
+                      _ ->
+                        contextualUnexpectedTokenHalt
+
               _ ->
                 contextualUnexpectedTokenHalt
 
@@ -211,6 +238,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
     index' = _index state
     definitions = _definitionList state
     defAnalyseStep' = _defAnalyseStep state
+    opAnalyseStep' = _opAnalyseStep state
 
     reachedToBottom = index' >= length tokens
     t = tokens !! index'
@@ -237,4 +265,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
             AnalyseFunDefArgSeparatorOrCloseParentheses -> "',' or ')'"
             AnalyseFunDefCloseParentheses               -> "')'"
             AnalyseFunDefOpenBraces                     -> "'{'"
-            AnalyseFunDefValue                          -> "Value or '}'"
+            AnalyseFunDefValue ->
+              case opAnalyseStep' of
+                AnalyseOpType          -> "Keyword or '}'"
+                AnalyseReturnSemicolon -> "';'"
