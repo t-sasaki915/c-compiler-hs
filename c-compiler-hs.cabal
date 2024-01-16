@@ -25,6 +25,7 @@ source-repository head
 library
   exposed-modules:
       Constant
+      ExpressionAnalyser
       LexicalAnalyseException
       LexicalAnalyser
       SyntaxAnalyseException
@@ -61,6 +62,7 @@ test-suite c-compiler-hs-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      ExpressionAnalyserTest
       LexicalAnalyserTest
       SyntaxAnalyserTest
       UtilTest
