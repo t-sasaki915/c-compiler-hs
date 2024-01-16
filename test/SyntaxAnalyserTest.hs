@@ -1,6 +1,7 @@
 module SyntaxAnalyserTest
   ( syntaxAnalyseTest1
   , syntaxAnalyseTest2
+  , syntaxAnalyseTest3
   ) where
 
 import           Data.Either     (fromRight)
@@ -74,6 +75,53 @@ syntaxAnalyseTest2 = TestCase (
               [ Node (VarDefinition (Keyword "int") (Identifier "x")) []
               , Node (Operation (Keyword "return"))
                   [ Node (Expression [Identifier "x"]) []
+                  ]
+              ]
+          ]
+      ]
+
+syntaxAnalyseTest3 :: Test
+syntaxAnalyseTest3 = TestCase (
+    assertEqual "syntaxAnalyseTest3"
+                (syntaxAnalyse $ fromRight [] (lexicalAnalyse sourceCode))
+                expected
+  )
+  where
+  sourceCode = concat
+    [ "int VERSION = 1;\n"
+    , "int getNextVersion() {\n"
+    , "  return VERSION + 1;\n"
+    , "}\n"
+    , "int add(int a, int b) {\n"
+    , "  return a + b;\n"
+    , "}\n"
+    , "int average(int a, int b) {\n"
+    , "  return (a + b) / 2;\n"
+    , "}\n"
+    ]
+  expected = Right $
+    Node Program
+      [ Node DefinitionList
+          [ Node (VarDefinition (Keyword "int") (Identifier "VERSION"))
+              [ Node (Expression [Number "1"]) []
+              ]
+          , Node (FunDefinition (Keyword "int") (Identifier "getNextVersion"))
+              [ Node (Operation (Keyword "return"))
+                  [ Node (Expression [Identifier "VERSION", Symbol '+', Number "1"]) []
+                  ]
+              ]
+          , Node (FunDefinition (Keyword "int") (Identifier "add"))
+              [ Node (VarDefinition (Keyword "int") (Identifier "a")) []
+              , Node (VarDefinition (Keyword "int") (Identifier "b")) []
+              , Node (Operation (Keyword "return"))
+                  [ Node (Expression [Identifier "a", Symbol '+', Identifier "b"]) []
+                  ]
+              ]
+          , Node (FunDefinition (Keyword "int") (Identifier "average"))
+              [ Node (VarDefinition (Keyword "int") (Identifier "a")) []
+              , Node (VarDefinition (Keyword "int") (Identifier "b")) []
+              , Node (Operation (Keyword "return"))
+                  [ Node (Expression [Symbol '(', Identifier "a", Symbol '+', Identifier "b", Symbol ')', Symbol '/', Number "2"]) []
                   ]
               ]
           ]

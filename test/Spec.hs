@@ -25,6 +25,7 @@ main = do
       , TestLabel "lexicalAnalyseTest 7"       lexicalAnalyseTest7
       , TestLabel "syntaxAnalyseTest 1"        syntaxAnalyseTest1
       , TestLabel "syntaxAnalyseTest 2"        syntaxAnalyseTest2
+      , TestLabel "syntaxAnalyseTest 3"        syntaxAnalyseTest3
       , TestLabel "expressionAnalyseTest 1"    expressionAnalyseTest1
       , TestLabel "expressionAnalyseTest 2"    expressionAnalyseTest2
       , TestLabel "expressionAnalyseTest 3"    expressionAnalyseTest3
