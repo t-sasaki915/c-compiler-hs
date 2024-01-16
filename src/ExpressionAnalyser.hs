@@ -37,14 +37,12 @@ expressionAnalyse tokens i = analyse $ State [] 0 i
 
           Symbol ';' ->
             case () of
-              () | null $ _expTokens state                -> Nothing
-                 | _numberOfParenthesesToClose state /= 0 -> Nothing
+              () | _numberOfParenthesesToClose state /= 0 -> Nothing
                  | otherwise                              -> Just (_expTokens state, index')
 
           Symbol ',' ->
             case () of
-              () | null $ _expTokens state                -> Nothing
-                 | _numberOfParenthesesToClose state /= 0 -> Nothing
+              () | _numberOfParenthesesToClose state /= 0 -> Nothing
                  | otherwise                              -> Just (_expTokens state, index')
 
           Identifier _ ->

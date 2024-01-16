@@ -123,6 +123,11 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                     case keyword of
                       "return" ->
                         case expressionAnalyse tokens (index' + 1) of
+                          Just ([], newIndex) ->
+                            continueAnalysing $
+                              over funDefOperations (++ [t]) .
+                              set opAnalyseStep AnalyseReturnSemicolon .
+                              set index newIndex
                           Just (expr, newIndex) ->
                             continueAnalysing $
                               over funDefOperations (++ [t]) .
@@ -163,6 +168,8 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                 case symbol of
                   '=' ->
                     case expressionAnalyse tokens (index' + 1) of
+                      Just ([], _) ->
+                        Left UnrecognisableExpression
                       Just (expr, newIndex) ->
                         continueAnalysing $
                           set varDefValueTokens expr .
