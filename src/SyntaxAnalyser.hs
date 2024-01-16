@@ -126,6 +126,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                           Just ([], newIndex) ->
                             continueAnalysing $
                               over funDefOperations (++ [t]) .
+                              over funDefOperationArgs (++ [[]]) .
                               set opAnalyseStep AnalyseReturnSemicolon .
                               set index newIndex
                           Just (expr, newIndex) ->
@@ -232,7 +233,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                 case symbol of
                   '{' ->
                     continueAnalysing $
-                      set defAnalyseStep AnalyseDefType .
+                      set defAnalyseStep AnalyseFunDefValue .
                       over index (+ 1)
                   _ ->
                     contextualUnexpectedTokenHalt
