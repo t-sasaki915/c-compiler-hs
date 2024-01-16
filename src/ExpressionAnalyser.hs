@@ -83,6 +83,10 @@ expressionAnalyse tokens i = analyse $ State [] 0 i
                          continueAnalysing $
                            over expTokens (++ [t]) .
                            over index (+ 1)
+                       Just (Number _) ->
+                         continueAnalysing $
+                           over expTokens (++ [t]) .
+                           over index (+ 1)
                        Just (Symbol ')') ->
                          continueAnalysing $
                            over expTokens (++ [t]) .
@@ -119,6 +123,11 @@ expressionAnalyse tokens i = analyse $ State [] 0 i
                                     over numberOfParenthesesToClose (subtract 1) .
                                     over index (+ 1)
                                 Just (Number _) ->
+                                  continueAnalysing $
+                                    over expTokens (++ [t]) .
+                                    over numberOfParenthesesToClose (subtract 1) .
+                                    over index (+ 1)
+                                Just (Symbol ')') ->
                                   continueAnalysing $
                                     over expTokens (++ [t]) .
                                     over numberOfParenthesesToClose (subtract 1) .
