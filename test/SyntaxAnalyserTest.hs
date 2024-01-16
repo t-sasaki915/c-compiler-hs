@@ -61,32 +61,19 @@ syntaxAnalyseTest2 = TestCase (
     ]
   expected = Right $
     Node Program
-      [ Node DeclarationList
-          [ Node Declaration
-              [ Node (TypeSpecifier (Keyword "int")) []
-              , Node (DeclarationLabel (Identifier "main")) []
-              , Node Operation
-                  [ Node (OperationVerb (Keyword "return")) []
-                  , Node (OperationArgument (Number "0")) []
+      [ Node DefinitionList
+          [ Node (FunDefinition (Keyword "int") (Identifier "main"))
+              [ Node (Operation (Keyword "return"))
+                  [ Node (Expression [Number "0"]) []
                   ]
               ]
-          , Node Declaration
-              [ Node (TypeSpecifier (Keyword "void")) []
-              , Node (DeclarationLabel (Identifier "nothing")) []
-              , Node Operation
-                  [ Node (OperationVerb (Keyword "return")) []
-                  ]
+          , Node (FunDefinition (Keyword "void") (Identifier "nothing"))
+              [ Node (Operation (Keyword "return")) []
               ]
-          , Node Declaration
-              [ Node (TypeSpecifier (Keyword "int")) []
-              , Node (DeclarationLabel  (Identifier "identity")) []
-              , Node DeclarationArgument
-                  [ Node (TypeSpecifier (Keyword "int")) []
-                  , Node (DeclarationLabel (Identifier "x")) []
-                  ]
-              , Node Operation
-                  [ Node (OperationVerb (Keyword "return")) []
-                  , Node (OperationArgument (Identifier "x")) []
+          , Node (FunDefinition (Keyword "int") (Identifier "identity"))
+              [ Node (VarDefinition (Keyword "int") (Identifier "x")) []
+              , Node (Operation (Keyword "return"))
+                  [ Node (Expression [Identifier "x"]) []
                   ]
               ]
           ]
