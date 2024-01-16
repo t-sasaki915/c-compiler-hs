@@ -29,17 +29,18 @@ data OperationAnalyseStep = AnalyseOpType
                           | AnalyseReturnSemicolon
 
 data State = State
-  { _definitionList      :: [SyntaxTree]
-  , _defType             :: Maybe Token
-  , _defLabel            :: Maybe Token
-  , _varDefValueTokens   :: [Token]
-  , _funDefArgTypes      :: [Token]
-  , _funDefArgLabels     :: [Token]
-  , _defAnalyseStep      :: DefinitionAnalyseStep
-  , _funDefOperations    :: [Token]
-  , _funDefOperationArgs :: [[SyntaxTree]]
-  , _opAnalyseStep       :: OperationAnalyseStep
-  , _index               :: Int
+  { _definitionList          :: [SyntaxTree]
+  , _defType                 :: Maybe Token
+  , _defLabel                :: Maybe Token
+  , _varDefValueTokens       :: [Token]
+  , _funDefArgTypes          :: [Token]
+  , _funDefArgLabels         :: [Token]
+  , _defAnalyseStep          :: DefinitionAnalyseStep
+  , _funDefOperations        :: [Token]
+  , _funDefOperationArgs     :: [[SyntaxTree]]
+  , _funDefOperationArgsTemp :: [SyntaxTree]
+  , _opAnalyseStep           :: OperationAnalyseStep
+  , _index                   :: Int
   }
 
 makeLenses ''State
@@ -60,7 +61,7 @@ mkFunDefTree s =
                   (combineList (_funDefOperations s) (_funDefOperationArgs s))
 
 syntaxAnalyse :: [Token] -> AnalyseResult
-syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefType [] [] AnalyseOpType 0
+syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefType [] [] [] AnalyseOpType 0
   where
   analyse :: State -> AnalyseResult
   analyse state
@@ -115,6 +116,26 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                                over index (+ 1)
                          | otherwise ->
                              contextualUnexpectedTokenHalt
+
+              AnalyseFunDefValue ->
+                case opAnalyseStep' of
+                  AnalyseOpType ->
+                    case keyword of
+                      "return" ->
+                        case expressionAnalyse tokens (index' + 1) of
+                          Just (expr, newIndex) ->
+                            continueAnalysing $
+                              over funDefOperations (++ [t]) .
+                              over funDefOperationArgs (++ [[Node (Expression expr) []]]) .
+                              set opAnalyseStep AnalyseReturnSemicolon .
+                              set index newIndex
+                          Nothing ->
+                            Left UnrecognisableExpression
+                      _ ->
+                        contextualUnexpectedTokenHalt
+
+                  _ ->
+                    contextualUnexpectedTokenHalt
 
               _ ->
                 contextualUnexpectedTokenHalt
@@ -223,6 +244,16 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                           set defAnalyseStep AnalyseDefType .
                           set funDefOperations [] .
                           set funDefOperationArgs [] .
+                          set funDefOperationArgsTemp [] .
+                          set opAnalyseStep AnalyseOpType .
+                          over index (+ 1)
+                      _ ->
+                        contextualUnexpectedTokenHalt
+
+                  AnalyseReturnSemicolon ->
+                    case symbol of
+                      ';' ->
+                        continueAnalysing $
                           set opAnalyseStep AnalyseOpType .
                           over index (+ 1)
                       _ ->
