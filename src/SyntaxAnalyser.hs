@@ -27,6 +27,8 @@ data DefinitionAnalyseStep = AnalyseDefType
 
 data OperationAnalyseStep = AnalyseOpType
                           | AnalyseReturnSemicolon
+                          | AnalyseReassignEqualOrOpenParentheses
+                          | AnalyseReassignSemicolon
 
 data State = State
   { _definitionList          :: [SyntaxTree]
@@ -48,8 +50,10 @@ makeLenses ''State
 mkVarDefTree :: State -> SyntaxTree
 mkVarDefTree s =
   Node (VarDefinition (fromJust $ _defType s) (fromJust $ _defLabel s))
-    [ Node (Expression $ _varDefValueTokens s) []
-    ]
+    ( case _varDefValueTokens s of
+        [] -> []
+        xs -> [Node (Expression xs) []]
+    )
 
 mkFunDefTree :: State -> SyntaxTree
 mkFunDefTree s =
@@ -160,6 +164,17 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                   set defAnalyseStep AnalyseFunDefArgSeparatorOrCloseParentheses .
                   over index (+ 1)
 
+              AnalyseFunDefValue ->
+                case opAnalyseStep' of
+                  AnalyseOpType ->
+                    continueAnalysing $
+                      over funDefOperations (++ [t]) .
+                      set opAnalyseStep AnalyseReassignEqualOrOpenParentheses .
+                      over index (+ 1)
+
+                  _ ->
+                    contextualUnexpectedTokenHalt
+
               _ ->
                 contextualUnexpectedTokenHalt
 
@@ -181,6 +196,13 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                   '(' ->
                     continueAnalysing $
                       set defAnalyseStep AnalyseFunDefArgType .
+                      over index (+ 1)
+                  ';' ->
+                    continueAnalysing $
+                      over definitionList (++ [mkVarDefTree state]) .
+                      set defType Nothing .
+                      set defLabel Nothing .
+                      set defAnalyseStep AnalyseDefType .
                       over index (+ 1)
                   _ ->
                     contextualUnexpectedTokenHalt
@@ -267,6 +289,31 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                       _ ->
                         contextualUnexpectedTokenHalt
 
+                  AnalyseReassignEqualOrOpenParentheses ->
+                    case symbol of
+                      '=' ->
+                        case expressionAnalyse tokens (index' + 1) of
+                          Just ([], _) ->
+                            Left UnrecognisableExpression
+                          Just (expr, newIndex) ->
+                            continueAnalysing $
+                              over funDefOperationArgs (++ [[Node (Expression expr) []]]) .
+                              set opAnalyseStep AnalyseReassignSemicolon .
+                              set index newIndex
+                          Nothing ->
+                            Left UnrecognisableExpression
+                      _ ->
+                        contextualUnexpectedTokenHalt
+
+                  AnalyseReassignSemicolon ->
+                    case symbol of
+                      ';' ->
+                        continueAnalysing $
+                          set opAnalyseStep AnalyseOpType .
+                          over index (+ 1)
+                      _ ->
+                        contextualUnexpectedTokenHalt
+
               _ ->
                 contextualUnexpectedTokenHalt
 
@@ -306,5 +353,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
             AnalyseFunDefOpenBraces                     -> "'{'"
             AnalyseFunDefValue ->
               case opAnalyseStep' of
-                AnalyseOpType          -> "Keyword or '}'"
-                AnalyseReturnSemicolon -> "';'"
+                AnalyseOpType                         -> "Keyword or '}'"
+                AnalyseReturnSemicolon                -> "';'"
+                AnalyseReassignEqualOrOpenParentheses -> "'=' or '('"
+                AnalyseReassignSemicolon              -> "';'"
