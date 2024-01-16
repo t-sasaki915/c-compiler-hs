@@ -64,16 +64,16 @@ syntaxAnalyseTest2 = TestCase (
     Node Program
       [ Node DefinitionList
           [ Node (FunDefinition (Keyword "int") (Identifier "main"))
-              [ Node (Operation (Keyword "return"))
+              [ Node Return
                   [ Node (Expression [Number "0"]) []
                   ]
               ]
           , Node (FunDefinition (Keyword "void") (Identifier "nothing"))
-              [ Node (Operation (Keyword "return")) []
+              [ Node Return []
               ]
           , Node (FunDefinition (Keyword "int") (Identifier "identity"))
               [ Node (VarDefinition (Keyword "int") (Identifier "x")) []
-              , Node (Operation (Keyword "return"))
+              , Node Return
                   [ Node (Expression [Identifier "x"]) []
                   ]
               ]
@@ -106,21 +106,21 @@ syntaxAnalyseTest3 = TestCase (
               [ Node (Expression [Number "1"]) []
               ]
           , Node (FunDefinition (Keyword "int") (Identifier "getNextVersion"))
-              [ Node (Operation (Keyword "return"))
+              [ Node Return
                   [ Node (Expression [Identifier "VERSION", Symbol '+', Number "1"]) []
                   ]
               ]
           , Node (FunDefinition (Keyword "int") (Identifier "add"))
               [ Node (VarDefinition (Keyword "int") (Identifier "a")) []
               , Node (VarDefinition (Keyword "int") (Identifier "b")) []
-              , Node (Operation (Keyword "return"))
+              , Node Return
                   [ Node (Expression [Identifier "a", Symbol '+', Identifier "b"]) []
                   ]
               ]
           , Node (FunDefinition (Keyword "int") (Identifier "average"))
               [ Node (VarDefinition (Keyword "int") (Identifier "a")) []
               , Node (VarDefinition (Keyword "int") (Identifier "b")) []
-              , Node (Operation (Keyword "return"))
+              , Node Return
                   [ Node (Expression [Symbol '(', Identifier "a", Symbol '+', Identifier "b", Symbol ')', Symbol '/', Number "2"]) []
                   ]
               ]

@@ -31,18 +31,17 @@ data OperationAnalyseStep = AnalyseOpType
                           | AnalyseReassignSemicolon
 
 data State = State
-  { _definitionList          :: [SyntaxTree]
-  , _defType                 :: Maybe Token
-  , _defLabel                :: Maybe Token
-  , _varDefValueTokens       :: [Token]
-  , _funDefArgTypes          :: [Token]
-  , _funDefArgLabels         :: [Token]
-  , _defAnalyseStep          :: DefinitionAnalyseStep
-  , _funDefOperations        :: [Token]
-  , _funDefOperationArgs     :: [[SyntaxTree]]
-  , _funDefOperationArgsTemp :: [SyntaxTree]
-  , _opAnalyseStep           :: OperationAnalyseStep
-  , _index                   :: Int
+  { _definitionList        :: [SyntaxTree]
+  , _defType               :: Maybe Token
+  , _defLabel              :: Maybe Token
+  , _varDefValueTokens     :: [Token]
+  , _funDefArgTypes        :: [Token]
+  , _funDefArgLabels       :: [Token]
+  , _defAnalyseStep        :: DefinitionAnalyseStep
+  , _funDefOperations      :: [SyntaxTree]
+  , _funDefOperationTarget :: Maybe Token
+  , _opAnalyseStep         :: OperationAnalyseStep
+  , _index                 :: Int
   }
 
 makeLenses ''State
@@ -57,15 +56,13 @@ mkVarDefTree s =
 
 mkFunDefTree :: State -> SyntaxTree
 mkFunDefTree s =
-  Node (FunDefinition (fromJust $ _defType s) (fromJust $ _defLabel s)) (argDefTrees ++ opTrees)
+  Node (FunDefinition (fromJust $ _defType s) (fromJust $ _defLabel s)) (argDefTrees ++ _funDefOperations s)
   where
   argDefTrees = map (\arg -> Node (uncurry VarDefinition arg) [])
                       (combineList (_funDefArgTypes s) (_funDefArgLabels s))
-  opTrees = map (\op -> Node (Operation $ fst op) (snd op))
-                  (combineList (_funDefOperations s) (_funDefOperationArgs s))
 
 syntaxAnalyse :: [Token] -> AnalyseResult
-syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefType [] [] [] AnalyseOpType 0
+syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefType [] Nothing AnalyseOpType 0
   where
   analyse :: State -> AnalyseResult
   analyse state
@@ -129,14 +126,12 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                         case expressionAnalyse tokens (index' + 1) of
                           Just ([], newIndex) ->
                             continueAnalysing $
-                              over funDefOperations (++ [t]) .
-                              over funDefOperationArgs (++ [[]]) .
+                              over funDefOperations (++ [Node Return []]) .
                               set opAnalyseStep AnalyseReturnSemicolon .
                               set index newIndex
                           Just (expr, newIndex) ->
                             continueAnalysing $
-                              over funDefOperations (++ [t]) .
-                              over funDefOperationArgs (++ [[Node (Expression expr) []]]) .
+                              over funDefOperations (++ [Node Return [Node (Expression expr) []]]) .
                               set opAnalyseStep AnalyseReturnSemicolon .
                               set index newIndex
                           Nothing ->
@@ -168,7 +163,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                 case opAnalyseStep' of
                   AnalyseOpType ->
                     continueAnalysing $
-                      over funDefOperations (++ [t]) .
+                      set funDefOperationTarget (Just t) .
                       set opAnalyseStep AnalyseReassignEqualOrOpenParentheses .
                       over index (+ 1)
 
@@ -273,8 +268,7 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                           set funDefArgLabels [] .
                           set defAnalyseStep AnalyseDefType .
                           set funDefOperations [] .
-                          set funDefOperationArgs [] .
-                          set funDefOperationArgsTemp [] .
+                          set funDefOperationTarget Nothing .
                           set opAnalyseStep AnalyseOpType .
                           over index (+ 1)
                       _ ->
@@ -297,7 +291,8 @@ syntaxAnalyse tokens = analyse $ State [] Nothing Nothing [] [] [] AnalyseDefTyp
                             Left UnrecognisableExpression
                           Just (expr, newIndex) ->
                             continueAnalysing $
-                              over funDefOperationArgs (++ [[Node (Expression expr) []]]) .
+                              over funDefOperations (++ [Node (VarReassign (fromJust $ _funDefOperationTarget state)) [Node (Expression expr) []]]) .
+                              set funDefOperationTarget Nothing .
                               set opAnalyseStep AnalyseReassignSemicolon .
                               set index newIndex
                           Nothing ->
