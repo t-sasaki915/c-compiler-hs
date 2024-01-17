@@ -26,6 +26,8 @@ library
   exposed-modules:
       Constant
       ExpressionAnalyser
+      ExpressionStructure
+      ExpressionStructureAnalyser
       LexicalAnalyseException
       LexicalAnalyser
       SyntaxAnalyseException
