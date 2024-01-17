@@ -41,9 +41,8 @@ combineList xs ys = combineList' 0 []
     | otherwise = combineList' (i + 1) (combined ++ [(xs !! i, ys !! i)])
 
 maybeLast :: [a] -> Maybe a
-maybeLast xs
-  | null xs   = Nothing
-  | otherwise = Just $ last xs
+maybeLast [] = Nothing
+maybeLast xs = Just $ last xs
 
 calculateLine :: Int -> String -> Int
 calculateLine n sourceCode =
