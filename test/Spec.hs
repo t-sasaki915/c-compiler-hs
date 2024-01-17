@@ -23,15 +23,18 @@ main = do
       , TestLabel "lexicalAnalyseTest 5"       lexicalAnalyseTest5
       , TestLabel "lexicalAnalyseTest 6"       lexicalAnalyseTest6
       , TestLabel "lexicalAnalyseTest 7"       lexicalAnalyseTest7
-      , TestLabel "syntaxAnalyseTest 1"        syntaxAnalyseTest1
-      , TestLabel "syntaxAnalyseTest 2"        syntaxAnalyseTest2
-      , TestLabel "syntaxAnalyseTest 3"        syntaxAnalyseTest3
       , TestLabel "expressionAnalyseTest 1"    expressionAnalyseTest1
       , TestLabel "expressionAnalyseTest 2"    expressionAnalyseTest2
       , TestLabel "expressionAnalyseTest 3"    expressionAnalyseTest3
       , TestLabel "expressionAnalyseTest 4"    expressionAnalyseTest4
       , TestLabel "expressionAnalyseTest 5"    expressionAnalyseTest5
       , TestLabel "expressionAnalyseTest 6"    expressionAnalyseTest6
+      , TestLabel "expressionAnalyseTest 7"    expressionAnalyseTest7
+      , TestLabel "expressionAnalyseTest 8"    expressionAnalyseTest8
+      , TestLabel "expressionAnalyseTest 9"    expressionAnalyseTest9
+      , TestLabel "syntaxAnalyseTest 1"        syntaxAnalyseTest1
+      , TestLabel "syntaxAnalyseTest 2"        syntaxAnalyseTest2
+      , TestLabel "syntaxAnalyseTest 3"        syntaxAnalyseTest3
       ]
   result <- runTestTT tests
   if failures result /= 0 || errors result /= 0 then

@@ -95,6 +95,14 @@ expressionAnalyse tokens i = analyse $ State [] 0 i
                          Nothing
                  | s == '(' ->
                      case lastToken of
+                       Just (Identifier _) ->
+                         case functionCallAnalyse tokens index' of
+                           Just (funcCallExpr, newIndex) ->
+                             continueAnalysing $
+                               over expTokens (++ funcCallExpr) .
+                               set index newIndex
+                           Nothing ->
+                             Nothing
                        Just (Symbol ')') ->
                          Nothing
                        Just (Symbol _) ->
@@ -112,9 +120,7 @@ expressionAnalyse tokens i = analyse $ State [] 0 i
                  | s == ')' ->
                      case () of
                        () | _numberOfParenthesesToClose state - 1 < 0 ->
-                              case () of
-                                () | null $ _expTokens state -> Nothing
-                                   | otherwise               -> Just (_expTokens state, index')
+                              Just (_expTokens state, index')
                           | otherwise ->
                               case lastToken of
                                 Just (Identifier _) ->
@@ -154,3 +160,37 @@ expressionAnalyse tokens i = analyse $ State [] 0 i
     continueAnalysing :: (State -> State) -> AnalyseResult
     continueAnalysing f = analyse $ f state
 
+functionCallAnalyse :: [Token] -> Int -> AnalyseResult
+functionCallAnalyse tokens i = analyse [] (i + 1)
+  where
+  analyse :: [Token] -> Int -> AnalyseResult
+  analyse funcArgs i' =
+    case expressionAnalyse tokens i' of
+      Just ([], newIndex) ->
+        case tokens !! newIndex of
+          Symbol ')' ->
+            case funcArgs of
+              [] -> Just ([Symbol '(', Symbol ')'], newIndex + 1)
+              _  -> Nothing
+          _ ->
+            Nothing
+
+      Just (expr, newIndex) ->
+        case tokens !! newIndex of
+          Symbol ')' ->
+            case funcArgs of
+              [] ->
+                Just ([Symbol '('] ++ expr ++ [Symbol ')'], newIndex + 1)
+              _  ->
+                Just ([Symbol '('] ++ funcArgs ++ [Symbol ','] ++ expr ++ [Symbol ')'], newIndex  + 1)
+          Symbol ',' ->
+            case funcArgs of
+              [] ->
+                analyse expr (newIndex + 1)
+              _ ->
+                analyse (funcArgs ++ [Symbol ','] ++ expr) (newIndex + 1)
+          _ ->
+            Nothing
+
+      Nothing ->
+          Nothing
